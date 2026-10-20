@@ -1,0 +1,9 @@
+.runtime/
+data/
+node_modules/
+.env
+.env.*
+*.log
+*.sqlite*
+*.db
+.release-check/

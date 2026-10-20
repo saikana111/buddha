@@ -1,0 +1,26 @@
+{
+  "name": "buddha-local",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test",
+    "import": "node scripts/sync-sources.mjs",
+    "index": "node scripts/build-library.mjs",
+    "import:bundle": "node scripts/import-bundle.mjs"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.11.2",
+    "parse5": "^8.0.1"
+  },
+  "version": "0.1.0",
+  "description": "A free noncommercial local Buddhist dialogue and study app",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/saikana111/buddha.git"
+  }
+}

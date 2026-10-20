@@ -1,0 +1,89 @@
+{
+  "researchedAt": "2026-10-19",
+  "scope": "A growing library across Buddhist textual traditions; never a claim to contain every canon or every translation.",
+  "sources": [
+    {
+      "id": "suttacentral",
+      "repository": "https://github.com/suttacentral/bilara-data",
+      "branch": "published",
+      "status": "imported",
+      "traditions": [
+        "Pāli",
+        "Chinese Āgamas",
+        "Indic parallels"
+      ],
+      "format": "Segment-aligned JSON",
+      "selection": "English translations with matched publication metadata and recognized licenses; original-language archive retained",
+      "license": "Per-publication CC0 or CC BY-SA 3.0",
+      "limitation": "Published branch and English coverage are incomplete; no full English Abhidhamma claim. Alternate translations count separately."
+    },
+    {
+      "id": "84000",
+      "repository": "https://github.com/84000/data-tei",
+      "branch": "master",
+      "status": "imported-reference-only",
+      "traditions": [
+        "Tibetan Kangyur",
+        "Tibetan Tengyur"
+      ],
+      "format": "TEI XML",
+      "selection": "Publication statuses 1 and 1.a, identifiable catalog IDs and translation bodies; newer duplicate edition retained",
+      "license": "Repository CC BY-NC-ND 3.0; source originals and attribution retained",
+      "limitation": "Older repository snapshot, incomplete translations, no training or generated paraphrase from these files in this implementation"
+    },
+    {
+      "id": "cbeta",
+      "repository": "https://github.com/cbeta-org/xml-p5",
+      "status": "researched-not-imported",
+      "traditions": [
+        "Chinese Taishō",
+        "Chinese supplementary collections"
+      ],
+      "format": "TEI XML",
+      "license": "CC BY-NC-SA 3.0 Taiwan generally, with exceptions; see https://archive2.cbeta.org/copyright.php",
+      "limitation": "Large classical-Chinese collection; needs collection-specific rights mapping and human English translations. No automatic machine translation presented as canonical English."
+    },
+    {
+      "id": "84000-current",
+      "url": "https://84000.co/reading-room",
+      "status": "researched-not-synced",
+      "traditions": [
+        "Tibetan Kangyur",
+        "Tibetan Tengyur"
+      ],
+      "limitation": "Current reading-room coverage exceeds the public repository snapshot. Its draft terms describe partner-only API access. No private API is used."
+    },
+    {
+      "id": "suttacentral-legacy",
+      "repository": "https://github.com/suttacentral/sc-data",
+      "status": "imported",
+      "collections": [
+        "English Khuddaka Nikaya",
+        "English Abhidhamma"
+      ],
+      "format": "HTML",
+      "selection": "Pinned revision; publication-footer rights checked per document",
+      "license": "Per-text CC licenses or explicit public-domain declaration; share-alike translations are reference-only",
+      "limitation": "Not complete English Tipitaka. Jataka includes commentary; canonical boundaries vary by recension."
+    },
+    {
+      "id": "sc-parallels",
+      "repository": "https://github.com/suttacentral/sc-data",
+      "status": "partially-imported",
+      "downloadedFiles": 879,
+      "indexedFiles": 35,
+      "selection": "Chinese/Sanskrit/Tibetan legacy English files; indexed only with recognized source rights or documented publisher grant",
+      "limitation": "Most downloaded files remain unindexed; no blanket permission inferred."
+    },
+    {
+      "id": "buddhist-legends",
+      "url": "https://ancient-buddhist-texts.net/English-Texts/Buddhist-Legends/index.htm",
+      "status": "imported-reference-only",
+      "files": 306,
+      "genre": "Dhammapada commentary narrative",
+      "edition": "Digital edition 1.5 (2020); newer revised edition exists",
+      "license": "Public-domain Burlingame original; CC BY-SA 3.0 editorial material",
+      "rightsUrl": "https://ancient-buddhist-texts.net/Miscellaneous/Copyright-Notice.htm"
+    }
+  ]
+}

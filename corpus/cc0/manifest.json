@@ -1,0 +1,40 @@
+{
+  "format": 1,
+  "license": "CC0-1.0",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "selection": "Bilara publications explicitly labeled CC0; normalized teaching text with source attribution, notices, revision and original-file checksum. No player data.",
+  "documents": 4786,
+  "passages": 13854,
+  "files": [
+    {
+      "name": "part-001.jsonl",
+      "bytes": 8277209,
+      "sha256": "f92e4ec32face3d42a7e4be8e7766e28d6b8515d1fab1010fdcb805276489f97"
+    },
+    {
+      "name": "part-002.jsonl",
+      "bytes": 8384284,
+      "sha256": "f98768122668f4fc5cea553cdeddc05fd7bf468a026cca4e8974ee0e9c0989ae"
+    },
+    {
+      "name": "part-003.jsonl",
+      "bytes": 8353614,
+      "sha256": "352b22d8c4f3f04360db3049ff01a34bca35d04c177aeb731df8d4f38a45f488"
+    },
+    {
+      "name": "part-004.jsonl",
+      "bytes": 8383982,
+      "sha256": "cab170300234b03f8951dd6860924f3c2bf7593f35d08c238397285db109b277"
+    },
+    {
+      "name": "part-005.jsonl",
+      "bytes": 8387263,
+      "sha256": "104dc9c30eb0a27405ba70d9b333056165730df8d52977a94c7821069cf7dfd8"
+    },
+    {
+      "name": "part-006.jsonl",
+      "bytes": 1140416,
+      "sha256": "f5ac92dfde907df880f204fac0553186021e65c4f39497d435f1e0836b2d9223"
+    }
+  ]
+}

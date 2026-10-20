@@ -1,0 +1,16 @@
+Beneath the Bodhi Tree is a free, noncommercial project.
+Original application code, documentation and original assets are offered under
+PolyForm Noncommercial 1.0.0, to the extent the contributors hold applicable rights.
+See LICENSE. This is source-available software, not an OSI open-source license.
+This statement does not establish registered nonprofit or charitable status.
+
+EXCLUSIONS:
+The actual teaching texts in corpus/cc0 remain under their own CC0 dedication.
+Their publication notices and provenance are retained in document metadata.
+The app license adds no restrictions to these texts.
+Downloaded third-party texts, model weights and dependencies retain their own
+licenses. No publisher or translator endorsement is implied.
+
+PNG artwork was generated with ImageGen; prompts are in docs/.
+The meditation bell is an original synthesized sound; its generator is included.
+No third-party game art or recorded chant is included.
