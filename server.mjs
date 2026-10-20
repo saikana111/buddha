@@ -9,7 +9,7 @@ import {inquiryMode,inquiryAnchors,inquiryPrompt,identityReply} from './lib/inqu
 import {meditationState,meditationCommand,clearMeditation} from './lib/meditation.mjs';
 import {teachingState,clearTeaching,prepareTeaching,lessonSources,teachingPrompt,recordLessonReply} from './lib/teaching.mjs';
 import { conceptHint, isConceptPrompt, isSocialPrompt, shouldSearch } from './lib/query-intent.mjs';
-import { initPlayers, getPlayer, updatePlayer, rememberChat, playerMemory, memoryPrompt } from './lib/player.mjs';
+import { initPlayers, getPlayer, updatePlayer, rememberChat, playerMemory, memoryPrompt, completeMeeting } from './lib/player.mjs';
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { openLibrary, libraryStats, retrieve, passageById } from './lib/corpus.mjs';
@@ -54,6 +54,12 @@ const server=http.createServer(async(req,res)=>{
         return send(res,405,{error:'Method not allowed'});
       }catch(error){return send(res,400,{error:error.message});}
     }
+    if(url.pathname==='/api/profile/meeting'&&req.method==='POST'){
+      const player=getPlayer(db,req.headers.cookie);
+      if(!player.configured)return send(res,409,{error:'Please enter a username.'});
+      completeMeeting(db,player.id);
+      return send(res,200,{ok:true});
+    }
     if(url.pathname==='/api/profile'){
       const player=getPlayer(db,req.headers.cookie);
       res.setHeader('Set-Cookie',`bodhi_player=${player.id}; Path=/; HttpOnly; SameSite=Strict; Max-Age=315360000`);
@@ -63,7 +69,7 @@ const server=http.createServer(async(req,res)=>{
         db.prepare('DELETE FROM player_chats WHERE player_id=?').run(player.id);
         clearTeaching(db,player.id);
         clearMeditation(db,player.id);
-        db.prepare("UPDATE players SET name='',focus='',notes='',language='en',configured=0 WHERE id=?").run(player.id);
+        db.prepare("UPDATE players SET name='',focus='',notes='',language='en',configured=0,met_buddha=0 WHERE id=?").run(player.id);
         return send(res,200,{ok:true});
       }
       if(req.method==='POST'){

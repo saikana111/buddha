@@ -18,7 +18,7 @@ function fixture(){
     memory:{history:[],lastResponse:null,chatCount:0,learning:[]},teaching:null,meditation:null};
   let meditating=false;
   const sandbox=vm.createContext({
-    document:{getElementById:element,createElement:()=>element(Symbol()),documentElement:{style:{setProperty(){}}}},
+    document:{getElementById:element,querySelector:()=>({decode:async()=>{}}),createElement:()=>element(Symbol()),documentElement:{style:{setProperty(){}}}},
     window:{addEventListener(){}},matchMedia:()=>({matches:true}),
     t:x=>x,setLanguage(){},currentLanguage:()=> 'en',setAvatarState(){},dialoguePages,
     isMeditating:()=>meditating,initMeditationUI:async()=>{},localDay:()=> '2026-10-20',
@@ -117,4 +117,30 @@ test('ordinary motion uses slow sprite blinks before revealing the opening',asyn
   assert.deepEqual(phases.slice(0,6),['waiting','glimpse','waiting','glimpse','waiting','ready']);
   assert.ok(timings.every(Boolean));
   assert.deepEqual(delays,[6000,650,650,650,650]);
+});
+
+test('returning players skip the entrance and keep the saved dialogue',async()=>{
+  const f=fixture();let requests=0;
+  f.sandbox.fetch=async()=>{requests++;throw Error('No entrance fetch expected');};
+  vm.runInContext("hasMet=true;history=[{role:'assistant',content:'Our previous conversation'}];",f.sandbox);
+  await vm.runInContext('enterGrove()',f.sandbox);
+  assert.equal(requests,0);
+  assert.equal(f.element('living-scene').dataset.arrival,'ready');
+  assert.equal(f.element('question').disabled,false);
+  assert.equal(vm.runInContext('history[0].content',f.sandbox),'Our previous conversation');
+});
+
+test('first meeting waits for image decoding and blinks even with ambient reduced motion',async()=>{
+  const f=fixture(),phases=[];let decoded=false,markRequests=0;
+  f.sandbox.document.querySelector=()=>({decode:async()=>{decoded=true;}});
+  f.sandbox.setTimeout=resolve=>{assert.equal(decoded,true);resolve();};
+  f.sandbox.setAvatarState=()=>phases.push(f.element('living-scene').dataset.arrival);
+  f.sandbox.fetch=async url=>{
+    if(url==='/api/profile/meeting')markRequests++;
+    return {ok:true,json:async()=>({passages:[{id:'dhp183',text:'To purify the mind.'}]})};
+  };
+  await vm.runInContext('enterGrove()',f.sandbox);
+  assert.deepEqual(phases.slice(0,6),['waiting','glimpse','waiting','glimpse','waiting','ready']);
+  assert.equal(markRequests,1);
+  assert.equal(vm.runInContext('hasMet',f.sandbox),true);
 });

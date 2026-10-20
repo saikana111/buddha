@@ -5,10 +5,11 @@ import { dialoguePages } from './dialogue-pages.js';
 const $=id=>document.getElementById(id);
 let history=[],sources=[],verse=0,typing=null,finish=null,configured=false,requestInFlight=false,pages=[],pageIndex=0,canContinue=false;
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-let arriving=false,arrivalGeneration=0;
+let arriving=false,arrivalGeneration=0,hasMet=false;
 function arrivalState(state){$('living-scene').dataset.arrival=state;setAvatarState(isMeditating()?'meditating':'idle');}
 async function enterGrove(){
   const generation=++arrivalGeneration;
+  if(hasMet){arrivalState('ready');unlock();return;}
   if(isMeditating()){arrivalState('ready');return;}
   arriving=true;clearInterval(typing);typing=null;finish=null;
   $('send').disabled=true;$('question').disabled=true;
@@ -23,10 +24,13 @@ async function enterGrove(){
   const opening=fetch('/api/dhammapada?verse=183',{signal:AbortSignal.timeout(6000)})
     .then(r=>r.ok?r.json():null).catch(()=>null);
   try{
+    // A cold-cache sprite must be decoded before its visible blink frames.
+    const avatar=document.querySelector('.scene-avatar');
+    if(avatar?.decode)await avatar.decode().catch(()=>{});
     await new Promise(resolve=>setTimeout(resolve,6000));
     if(!valid())return;
-    if(!reduced){
-      // Slow, stepped sprite appearances, not rapid flashing.
+    {
+      // Explicit, slow visibility changes also work when ambient motion is paused.
       for(const state of ['glimpse','waiting','glimpse','waiting']){
         arrivalState(state);
         await new Promise(resolve=>setTimeout(resolve,650));
@@ -35,6 +39,9 @@ async function enterGrove(){
     }
     arrivalState('ready');
     const result=await opening;if(!valid())return;
+    await fetch('/api/profile/meeting',{method:'POST',signal:AbortSignal.timeout(6000)})
+      .then(r=>{if(r.ok)hasMet=true;}).catch(()=>{});
+    if(!valid())return;
     arriving=false;
     const savedHistory=history.slice();
     render(result?.passages?.length?result:{notice:currentLanguage()==='es'?'Acércate. ¿Qué deseas comprender?':'Come closer. What do you wish to understand?'});
@@ -126,7 +133,7 @@ fitViewport();
 async function loadProfile(restore=false){
   const response=await fetch('/api/profile?day='+localDay());if(!response.ok)throw Error(t("Could not load your profile."));
   const {player,memory,teaching,meditation}=await response.json();
-  configured=!!player.configured;setLanguage(player.language);$('player-language').value=player.language;
+  configured=!!player.configured;hasMet=!!player.met_buddha;setLanguage(player.language);$('player-language').value=player.language;
   $('player-minutes').value=meditation?.settings.minutes||10;$('welcome-minutes').value=meditation?.settings.minutes||10;
   $('player-name').value=player.name;$('player-focus').value=player.focus;$('player-notes').value=player.notes;
   renderStudyPlans(teaching);
@@ -185,4 +192,4 @@ $('profile-form').onsubmit=async event=>{event.preventDefault();try{const r=awai
 $('forget-profile').onclick=async()=>{if(!confirm(t("Delete this player’s saved profile and all their conversations?")))return;try{const r=await fetch('/api/profile',{method:'DELETE'});if(!r.ok)throw Error(t("Could not forget this profile."));arrivalGeneration++;arriving=false;arrivalState('waiting');resetMeditationUI();history=[];sources=[];verse=0;clearInterval(typing);finish=null;$('reply').replaceChildren();const p=document.createElement('p');p.textContent=t("What is on your mind?");$('reply').append(p);await loadProfile();$('profile-dialog').close();showWelcome();}catch(e){$('profile-status').textContent=t(e.message);}};
 // Establish the cookie before allowing the first conversation to avoid racing identities.
 $('send').disabled=true;$('question').disabled=true;
-loadProfile().then(async memory=>{history=memory.history;if(!configured)showWelcome();else await enterGrove();}).catch(e=>{showWelcome();$('welcome-status').textContent=t(e.message);});
+loadProfile(true).then(async memory=>{history=memory.history;if(!configured)showWelcome();else await enterGrove();}).catch(e=>{showWelcome();$('welcome-status').textContent=t(e.message);});

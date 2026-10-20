@@ -98,8 +98,12 @@ after the current typewriter animation completes (Show all skips that animation)
 Dhammapada verse navigation remains separate. Continue is hidden during
 meditation and while a reply is being generated.
 
-The page cursor is not persisted; reloading plays the grove entrance and its
-opening verse while retaining conversation memory. The pedagogical encounter
+The page cursor is not persisted; returning players restore their last response
+with the Buddha already seated. Only a profile's first meeting plays the grove
+entrance and opening verse. Completion is stored in `players.met_buddha`;
+existing configured profiles migrate as already met, and forgetting a profile
+resets it. The sprite is decoded before two slow visible/hidden blinks, including
+when ambient animation is paused or reduced. The pedagogical encounter
 stage is persisted. Automated tests
 cover paging, source boundaries, player isolation, continuation, and the
 meditation/composer interactions. Local-model samples are qualitative checks,
