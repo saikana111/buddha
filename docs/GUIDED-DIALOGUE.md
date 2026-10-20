@@ -98,16 +98,41 @@ after the current typewriter animation completes (Show all skips that animation)
 Dhammapada verse navigation remains separate. Continue is hidden during
 meditation and while a reply is being generated.
 
-The page cursor is not persisted; reloading returns to the first page of the last
-saved response. The pedagogical encounter stage is persisted. Automated tests
+The page cursor is not persisted; reloading plays the grove entrance and its
+opening verse while retaining conversation memory. The pedagogical encounter
+stage is persisted. Automated tests
 cover paging, source boundaries, player isolation, continuation, and the
 meditation/composer interactions. Local-model samples are qualitative checks,
 not scholarly validation or a guarantee of teaching quality.
 
+## Source-first teaching
+
+New substantive questions now prioritize actual source passages. The model
+selects up to two relevant IDs; the server copies the stored translation into
+quoted dialogue blocks without paraphrasing, shortening, or inventing lines.
+Selection favors canonical verses, stories, similes, and dialogues when relevant,
+including the Dhammapada. It can select technical exposition when that answers
+the question better. The normal 200-word browser pages preserve the full chunks.
+This works across eligible imported texts, not just curated examples.
+
+Continue, clarification, and requests to explain the preceding teaching enter
+the grounded discussion path. A new topic or request for another quotation
+returns to source selection. Social conversation and identity questions retain
+their existing behavior. Selection can still be imperfect: citations expose
+the edition, speaker metadata, genre, and surrounding context for checking.
+An excerpt is not necessarily a complete story, and narrator/disciples' words
+are not silently rewritten as the Buddha's own speech.
+
+Spanish profiles see the exact installed English source with a language label
+and can ask for explanation in Spanish. These source-first quotes are never
+silently replaced by machine translations. Saved responses retain the quoted
+text and source IDs; model-generated explanations remain distinct from quotes.
+
 ## Depth and faithful reading
 
-An explicit request for depth, technical distinctions, precise wording, or
-poetry bypasses the introductory encounter selector. Detailed exposition keeps
+During follow-up discussion, an explicit request for depth or technical
+distinctions bypasses the introductory encounter selector. New topics still
+receive source text first. Detailed exposition keeps
 the 200-word window but may continue over further turns; Continue preserves
 the depth preference in the saved response. The model is instructed to retain
 qualifications and terminology instead of replacing doctrine with motivational
