@@ -17,8 +17,9 @@ Research references: Thanissaro Bhikkhu's translations hosted by Access to
 Insight, consulted 2026-10-20. Their translation licenses remain their own.
 These links document design choices and do not add a new translation corpus.
 
-Clouds have transparent backgrounds and softly rounded, flat-shaded SVG silhouettes,
-replacing the earlier rectangular overlays and coarse pixel steps. Nighttime
+Daytime uses only the clouds already painted into the background, avoiding
+competing overlay styles. At night, one subdued, slightly softened cloud
+drifts past the moon; its opacity ranges from 0.08 to 0.4. Nighttime
 fireflies have bright centers and soft green-gold halos around the pond and tree;
 they remain visible when motion is disabled. Existing time-of-day palette swaps
 are preserved. Props are phase-specific; no additional dialogue-panel text
