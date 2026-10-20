@@ -1,5 +1,5 @@
 import {t,setLanguage,currentLanguage} from './language.js';
-import {initMeditationUI,isMeditating,resetMeditationUI,localDay} from './meditation.js';
+import {initMeditationUI,isMeditating,resetMeditationUI,localDay,armMeditationAudio,refreshMeditation} from './meditation.js';
 import { setAvatarState } from './scene.js';
 const $=id=>document.getElementById(id);
 let history=[],sources=[],verse=0,typing=null,finish=null,configured=false,requestInFlight=false;
@@ -37,9 +37,10 @@ async function loadProfile(restore=false){
   const response=await fetch('/api/profile?day='+localDay());if(!response.ok)throw Error(t("Could not load your profile."));
   const {player,memory,teaching,meditation}=await response.json();
   configured=!!player.configured;setLanguage(player.language);$('player-language').value=player.language;
+  $('player-minutes').value=meditation?.settings.minutes||10;$('welcome-minutes').value=meditation?.settings.minutes||10;
   $('player-name').value=player.name;$('player-focus').value=player.focus;$('player-notes').value=player.notes;
   renderStudyPlans(teaching);
-  if(meditation){const p=document.createElement('p');p.textContent=currentLanguage()==='es'?`Meditación de hoy: ${(meditation.completedSeconds/60).toFixed(1)} / ${meditation.settings.minutes} minutos.`:`Today's meditation: ${(meditation.completedSeconds/60).toFixed(1)} / ${meditation.settings.minutes} minutes.`;$('study-plans').prepend(p);}
+  if(meditation){const p=document.createElement('p');p.textContent=currentLanguage()==='es'?`Meditación de hoy: ${(meditation.completedSeconds/60).toFixed(1)} minutos (${meditation.settings.minutes} min/h).`:`Today's meditation: ${(meditation.completedSeconds/60).toFixed(1)} minutes (${meditation.settings.minutes} min/h).`;$('study-plans').prepend(p);}
   $('profile-status').textContent=currentLanguage()==='es'?`${memory.chatCount} conversaciones guardadas en este PC.`:`${memory.chatCount} conversations saved on this PC.`;
   $('learning-notes').replaceChildren();
   for(const item of memory.learning){const p=document.createElement('p');p.textContent=`${t(item.topic)}: ${item.discussions} ${t('discussions')}. ${item.needsReview?t('You mentioned difficulty; worth revisiting.'):t('Understanding not yet assessed.')}`;if(item.evidence){const small=document.createElement('small');small.textContent=` ${t('You said:')} ${item.evidence}`;p.append(small);}$('learning-notes').append(p);}
@@ -77,11 +78,11 @@ function renderStudyPlans(teaching){
 $('welcome-dialog').addEventListener('cancel',e=>e.preventDefault());
 $('welcome-language').onchange=()=>setLanguage($('welcome-language').value);
 $('welcome-form').onsubmit=async e=>{
-  e.preventDefault();const name=$('welcome-name').value.trim();
+  e.preventDefault();void armMeditationAudio();const name=$('welcome-name').value.trim();
   if(!name){$('welcome-status').textContent=t('Please enter a username.');return;}
   $('begin').disabled=true;$('welcome-status').textContent='';
   try{
-    const r=await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,language:$('welcome-language').value,focus:$('player-focus').value,notes:$('player-notes').value})});
+    const r=await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,meditationMinutes:Number($('welcome-minutes').value),language:$('welcome-language').value,focus:$('player-focus').value,notes:$('player-notes').value})});
     if(!r.ok)throw Error((await r.json()).error);
     await loadProfile();$('welcome-dialog').close();
     $('reply').replaceChildren();const p=document.createElement('p');p.textContent=currentLanguage()==='es'?`Hola, ${name}. ${t('What is on your mind?')}`:`Welcome, ${name}. What is on your mind?`;$('reply').append(p);unlock();
@@ -89,7 +90,7 @@ $('welcome-form').onsubmit=async e=>{
 };
 $('open-profile').onclick=async()=>{$('profile-dialog').showModal();try{await loadProfile();}catch(e){$('profile-status').textContent=t(e.message);}};
 $('close-profile').onclick=()=>$('profile-dialog').close();
-$('profile-form').onsubmit=async event=>{event.preventDefault();try{const r=await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('player-name').value,focus:$('player-focus').value,notes:$('player-notes').value,language:$('player-language').value})});if(!r.ok)throw Error((await r.json()).error);setLanguage($('player-language').value);$('profile-status').textContent=t("Saved.");}catch(e){$('profile-status').textContent=t(e.message);}};
+$('profile-form').onsubmit=async event=>{event.preventDefault();try{const r=await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('player-name').value,meditationMinutes:Number($('player-minutes').value),focus:$('player-focus').value,notes:$('player-notes').value,language:$('player-language').value})});if(!r.ok)throw Error((await r.json()).error);setLanguage($('player-language').value);await refreshMeditation();$('profile-status').textContent=t("Saved.");}catch(e){$('profile-status').textContent=t(e.message);}};
 $('forget-profile').onclick=async()=>{if(!confirm(t("Delete this player’s saved profile and all their conversations?")))return;try{const r=await fetch('/api/profile',{method:'DELETE'});if(!r.ok)throw Error(t("Could not forget this profile."));resetMeditationUI();history=[];sources=[];verse=0;clearInterval(typing);finish=null;$('reply').replaceChildren();const p=document.createElement('p');p.textContent=t("What is on your mind?");$('reply').append(p);await loadProfile();$('profile-dialog').close();showWelcome();}catch(e){$('profile-status').textContent=t(e.message);}};
 // Establish the cookie before allowing the first conversation to avoid racing identities.
 $('send').disabled=true;$('question').disabled=true;

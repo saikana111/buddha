@@ -40,7 +40,7 @@ const server=http.createServer(async(req,res)=>{
         if(req.method==='POST'){
           let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>8000)return send(res,413,{error:'Request too long'});}
           const data=JSON.parse(raw);
-          if(busy&&['start','settings'].includes(data.action))return send(res,409,{error:'Please wait for this reply to finish.'});
+          if(busy&&['check','settings'].includes(data.action))return send(res,409,{error:'Please wait for this reply to finish.'});
           return send(res,200,meditationCommand(db,player.id,data));
         }
         return send(res,405,{error:'Method not allowed'});
@@ -65,7 +65,7 @@ const server=http.createServer(async(req,res)=>{
       }
       return send(res,405,{error:'Method not allowed'});
     }
-    const assets={'/assets/meditation-bell.wav':['public/assets/meditation-bell.wav','audio/wav'],'/assets/buddha-meditating.png':['public/assets/buddha-meditating.png','image/png'],'/assets/bodhi-retro-vivid.png':['public/assets/bodhi-retro-vivid.png','image/png'],'/assets/buddha-retro.png':['public/assets/buddha-retro.png','image/png'],'/assets/bodhi-retro.png':['public/assets/bodhi-retro.png','image/png'],'/assets/buddha-cel.png':['public/assets/buddha-cel.png','image/png'],'/assets/bodhi-cel-background.png':['public/assets/bodhi-cel-background.png','image/png'],'/scene.js':['public/scene.js','text/javascript; charset=utf-8'],'/':['public/index.html','text/html; charset=utf-8'],'/app.js':['public/app.js','text/javascript; charset=utf-8'],'/style.css':['public/style.css','text/css; charset=utf-8'],'/assets/bodhi-dawn.png':['public/assets/bodhi-dawn.png','image/png']};
+    const assets={'/assets/temple-bell.ogg':['public/assets/temple-bell.ogg','audio/ogg'],'/assets/singing-bowl-struck.ogg':['public/assets/singing-bowl-struck.ogg','audio/ogg'],'/assets/singing-bowl-rubbed.ogg':['public/assets/singing-bowl-rubbed.ogg','audio/ogg'],'/assets/meditation-bell.wav':['public/assets/meditation-bell.wav','audio/wav'],'/assets/buddha-meditating.png':['public/assets/buddha-meditating.png','image/png'],'/assets/bodhi-retro-vivid.png':['public/assets/bodhi-retro-vivid.png','image/png'],'/assets/buddha-retro.png':['public/assets/buddha-retro.png','image/png'],'/assets/bodhi-retro.png':['public/assets/bodhi-retro.png','image/png'],'/assets/buddha-cel.png':['public/assets/buddha-cel.png','image/png'],'/assets/bodhi-cel-background.png':['public/assets/bodhi-cel-background.png','image/png'],'/scene.js':['public/scene.js','text/javascript; charset=utf-8'],'/':['public/index.html','text/html; charset=utf-8'],'/app.js':['public/app.js','text/javascript; charset=utf-8'],'/style.css':['public/style.css','text/css; charset=utf-8'],'/assets/bodhi-dawn.png':['public/assets/bodhi-dawn.png','image/png']};
     if(req.method==='GET'&&assets[url.pathname]){const [file,type]=assets[url.pathname];res.writeHead(200,{'Content-Type':type,'Cache-Control':type==='image/png'?'public,max-age=86400':'no-cache','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; style-src 'self'; img-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'"});return res.end(await readFile(file));}
     if(req.method==='GET'&&url.pathname==='/api/status')return send(res,200,{model,...stats,imports:stats.imports.map(({skipped,...r})=>({...r,skipped:skipped.length})),mode:'Local retrieval-augmented dialogue; no weight training'});
     if(req.method==='GET'&&url.pathname==='/api/canon')return send(res,200,JSON.parse(await readFile('data/tipitaka-coverage.json','utf8')));
@@ -85,7 +85,7 @@ const server=http.createServer(async(req,res)=>{
     if(!player.configured)return send(res,409,{error:'Please enter a username.'});
     const memory=playerMemory(db,player.id,question);
     const meditation=meditationState(db,player.id,/^\d{4}-\d{2}-\d{2}$/.test(body.localDate||'')?body.localDate:new Date().toISOString().slice(0,10));
-    memory.meditation={dailyGoalMinutes:meditation.settings.minutes,loggedMinutesToday:Math.round(meditation.completedSeconds/6)/10};
+    memory.meditation={minutesPerHour:meditation.settings.minutes,loggedMinutesToday:Math.round(meditation.completedSeconds/6)/10};
     const history=memory.history.slice(-6);
     const inquiry=inquiryMode(question);
     let teaching={plan:null,engaged:false,preferences:[]};

@@ -12,5 +12,7 @@ Downloaded third-party texts, model weights and dependencies retain their own
 licenses. No publisher or translator endorsement is implied.
 
 PNG artwork was generated with ImageGen; prompts are in docs/.
-The meditation bell is an original synthesized sound; its generator is included.
+The active temple bell and singing bowls are third-party recordings; see
+docs/AUDIO-SOURCES.md for attribution and independent licenses. The earlier
+synthesized bell and its generator remain included as historical assets.
 No third-party game art or recorded chant is included.
