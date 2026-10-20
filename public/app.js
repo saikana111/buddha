@@ -32,6 +32,11 @@ function appendContext(box,passage){
  });
 }
 function unlock(){if(!configured||isMeditating())return;setAvatarState('idle');$('send').disabled=false;$('question').disabled=false;$('reveal').hidden=true;$('next').hidden=!verse;$('question').focus();}
+async function restoreAfterMeditation(){
+  // Restoring an empty history does not call render(), and profile fetches can fail.
+  // Neither case may leave the composer locked after a completed sitting.
+  try{await loadProfile(true);}finally{unlock();}
+}
 function render(result){sources=result.passages||[];const nodes=[];for(const para of result.paragraphs||[]){const p=document.createElement('p');p.textContent=para.text;for(const id of para.ids)p.append(sourceButton(id));nodes.push(p);}
   if(!nodes.length&&sources.length){for(const src of sources){const q=document.createElement('blockquote');const translated=result.translatedExcerpts?.find(p=>p.id===src.id);q.textContent=translated?.text||src.text;if(currentLanguage()==='es'){const note=document.createElement('small');note.textContent=t(translated?'Machine-assisted translation; original in the source.':'Source excerpt (English).');nodes.push(note);}q.append(sourceButton(src.id));nodes.push(q);}}
   if(!nodes.length){const p=document.createElement('p');p.textContent=result.notice||t("Could you tell me a little more?");nodes.push(p);}
@@ -70,7 +75,7 @@ async function loadProfile(restore=false){
   for(const item of memory.learning){const p=document.createElement('p');p.textContent=`${t(item.topic)}: ${item.discussions} ${t('discussions')}. ${item.needsReview?t('You mentioned difficulty; worth revisiting.'):t('Understanding not yet assessed.')}`;if(item.evidence){const small=document.createElement('small');small.textContent=` ${t('You said:')} ${item.evidence}`;p.append(small);}$('learning-notes').append(p);}
   $('past-chats').textContent=memory.history.map(m=>`${m.role==='user'?t('You'):t('Reply')}: ${m.content}`).join('\n\n');
   if(restore){history=memory.history;if(memory.lastResponse){render(memory.lastResponse);finish?.();history=memory.history;}else if(player.name){$('reply').firstElementChild.textContent=currentLanguage()==='es'?`Hola, ${player.name}. ${t('What is on your mind?')}`:`Welcome, ${player.name}. What is on your mind?`;}}
-  if(configured)await initMeditationUI({isBusy:()=>requestInFlight||!!typing,onEnd:()=>loadProfile(true)});
+  if(configured)await initMeditationUI({isBusy:()=>requestInFlight||!!typing,onEnd:restoreAfterMeditation});
 }
 function showWelcome(){
   $('send').disabled=true;$('question').disabled=true;

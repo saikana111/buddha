@@ -1,8 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { shouldSearch,conceptHint } from './lib/query-intent.mjs';
+import { shouldSearch,conceptHint,isSocialPrompt } from './lib/query-intent.mjs';
 import { openLibrary,retrieve } from './lib/corpus.mjs';
+
+test('social conversation reaches generation even if relevance classification misses it',()=>{
+  for(const q of ['how are you today?','Hi, how is your day going?','hola, ¿cómo estás hoy?','gracias!']){
+    assert.equal(isSocialPrompt(q),true,q);
+    assert.equal(shouldSearch(q,{relevant:false}),true,q);
+  }
+  assert.equal(shouldSearch('You look as though the rain cannot bother you today',{relevant:false,conversational:true}),true);
+  assert.equal(isSocialPrompt('How are you interpreting dependent origination?'),false);
+  assert.equal(isSocialPrompt('write Python code'),false);
+});
 
 test('short concepts reach retrieval even when the model labels them irrelevant',()=>{
   for(const q of ['immersion','inmersión','samādhi','concentración','grief','impermanence','atención plena','fear of losing someone'])assert.equal(shouldSearch(q,{relevant:false}),true,q);
