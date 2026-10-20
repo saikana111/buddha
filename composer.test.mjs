@@ -23,7 +23,7 @@ function fixture(){
     t:x=>x,setLanguage(){},currentLanguage:()=> 'en',setAvatarState(){},dialoguePages,
     isMeditating:()=>meditating,initMeditationUI:async()=>{},localDay:()=> '2026-10-20',
     fetch:()=>new Promise(()=>{}),clearInterval(){},setInterval(){},
-    setTimeout:resolve=>resolve(),AbortSignal,
+    setTimeout:resolve=>resolve(),AbortSignal,AbortController,
   });
   vm.runInContext(readFileSync(new URL('./public/app.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,''),sandbox);
   sandbox.fetch=async()=>({ok:true,json:async()=>profile});
@@ -143,4 +143,47 @@ test('first meeting waits for image decoding and blinks even with ambient reduce
   assert.deepEqual(phases.slice(0,6),['waiting','glimpse','waiting','glimpse','waiting','ready']);
   assert.equal(markRequests,1);
   assert.equal(vm.runInContext('hasMet',f.sandbox),true);
+});
+
+test('a stalled reply can be canceled and the composer and draft recover',async()=>{
+  const f=fixture();
+  f.sandbox.fetch=(_url,{signal})=>new Promise((resolve,reject)=>{
+    signal.addEventListener('abort',()=>reject(signal.reason),{once:true});
+  });
+  const request=vm.runInContext("ask('Please continue.')",f.sandbox);
+  assert.equal(f.element('question').disabled,true);
+  assert.equal(f.element('cancel-reply').hidden,false);
+  f.element('cancel-reply').onclick();
+  await request;
+  assert.equal(f.element('question').disabled,false);
+  assert.equal(f.element('send').disabled,false);
+  assert.equal(f.element('cancel-reply').hidden,true);
+  assert.equal(f.element('question').value,'Please continue.');
+  assert.equal(vm.runInContext('requestInFlight',f.sandbox),false);
+});
+
+test('timeout and disconnected-server errors cannot strand the composer',async()=>{
+  for(const name of ['TimeoutError','TypeError']){
+    const f=fixture();
+    f.sandbox.fetch=async()=>{const error=new Error('Request failed');error.name=name;throw error;};
+    await vm.runInContext("ask('What is happiness?')",f.sandbox);
+    assert.equal(f.element('question').disabled,false);
+    assert.equal(vm.runInContext('requestInFlight',f.sandbox),false);
+    assert.equal(f.element('cancel-reply').hidden,true);
+  }
+});
+
+test('waiting narration follows synthesis status and cannot overwrite a finished reply',async()=>{
+  const f=fixture();let poll;const waiting={textContent:''};
+  f.sandbox.waiting=waiting;
+  f.sandbox.setInterval=callback=>{poll=callback;return 17;};
+  vm.runInContext('replyController=new AbortController();watchReply(waiting,replyController);',f.sandbox);
+  f.sandbox.fetch=async()=>({ok:true,json:async()=>({stage:'reflecting'})});
+  await poll();
+  assert.match(waiting.textContent,/seated man.*consider your question/);
+  assert.doesNotMatch(waiting.textContent,/Buddha|enlightened/);
+  vm.runInContext('replyController=null;',f.sandbox);
+  waiting.textContent='Finished';
+  await poll();
+  assert.equal(waiting.textContent,'Finished');
 });

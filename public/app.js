@@ -5,7 +5,30 @@ import { dialoguePages } from './dialogue-pages.js';
 const $=id=>document.getElementById(id);
 let history=[],sources=[],verse=0,typing=null,finish=null,configured=false,requestInFlight=false,pages=[],pageIndex=0,canContinue=false;
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-let arriving=false,arrivalGeneration=0,hasMet=false;
+let arriving=false,arrivalGeneration=0,hasMet=false,replyController=null;
+function waitingWords(stage){
+  if(stage==='reflecting')return currentLanguage()==='es'
+    ?'El hombre sentado te mira, tomándose un momento para considerar tu pregunta.'
+    :'The seated man looks toward you, taking time to consider your question.';
+  return currentLanguage()==='es'
+    ?'El hombre escucha en silencio. Las hojas se mecen sobre ustedes.'
+    :'The man listens in silence. Leaves stir above you.';
+}
+function watchReply(waiting,controller){
+  let polling=false;
+  return setInterval(async()=>{
+    if(polling||controller.signal.aborted)return;
+    polling=true;
+    try{
+      const r=await fetch('/api/reply-status',{signal:AbortSignal.any([controller.signal,AbortSignal.timeout(2000)])});
+      const status=await r.json();
+      if(r.ok&&replyController===controller&&!controller.signal.aborted&&['listening','reflecting'].includes(status.stage)){
+        const words=waitingWords(status.stage);
+        if(waiting.textContent!==words)waiting.textContent=words;
+      }
+    }catch{}finally{polling=false;}
+  },2500);
+}
 function arrivalState(state){$('living-scene').dataset.arrival=state;setAvatarState(isMeditating()?'meditating':'idle');}
 async function enterGrove(){
   const generation=++arrivalGeneration;
@@ -115,10 +138,11 @@ $('continue-dialogue').onclick=()=>{
   if(pageIndex+1<pages.length){pageIndex++;showDialoguePage();}
   else return ask(currentLanguage()==='es'?'Continúa, por favor.':'Please continue.');
 };
-async function ask(question,planId){if(isMeditating()||arriving)return;if(!configured){showWelcome();return;}requestInFlight=true;setAvatarState('listening');verse=0;const m=question.match(/(?:dhammapada|dhp)\s*(?:(?:verse|verso)\s*)?(\d{1,3})\b/i);if(m&&!/explain|mean|interpret|story|stories|background|commentary|explica|significa|historia|comentario/i.test(question))verse=Number(m[1]);if(/^\s*(read|recite|start|begin|teach me)\s+(the\s+)?dhammapada[.!?]?\s*$/i.test(question)){question='Dhammapada verse 1';verse=1;}
-  $('send').disabled=true;$('question').disabled=true;$('next').hidden=true;$('continue-dialogue').hidden=true;const waiting=document.createElement('p');waiting.textContent='…';waiting.className='waiting';$('reply').replaceChildren(waiting);
-  try{const r=await fetch('/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,planId,history,localDate:localDay(),previousIds:sources.map(p=>p.id)})});const result=await r.json();if(!r.ok)throw Error(result.error);history.push({role:'user',content:question});render(result);}catch(e){verse=0;const p=document.createElement('p');p.textContent=t(e.message);$('reply').replaceChildren(p);unlock();}finally{requestInFlight=false;}
+async function ask(question,planId){if(isMeditating()||arriving||requestInFlight)return;if(!configured){showWelcome();return;}requestInFlight=true;replyController=new AbortController();$('cancel-reply').hidden=false;$('cancel-reply').textContent=currentLanguage()==='es'?'Cancelar':'Cancel';setAvatarState('listening');verse=0;const m=question.match(/(?:dhammapada|dhp)\s*(?:(?:verse|verso)\s*)?(\d{1,3})\b/i);if(m&&!/explain|mean|interpret|story|stories|background|commentary|explica|significa|historia|comentario/i.test(question))verse=Number(m[1]);if(/^\s*(read|recite|start|begin|teach me)\s+(the\s+)?dhammapada[.!?]?\s*$/i.test(question)){question='Dhammapada verse 1';verse=1;}
+  $('send').disabled=true;$('question').disabled=true;$('next').hidden=true;$('continue-dialogue').hidden=true;const waiting=document.createElement('p');waiting.textContent=waitingWords('listening');waiting.className='waiting';$('reply').replaceChildren(waiting);const waitingPoll=watchReply(waiting,replyController);
+  try{const r=await fetch('/api/ask',{method:'POST',signal:AbortSignal.any([replyController.signal,AbortSignal.timeout(245000)]),headers:{'Content-Type':'application/json'},body:JSON.stringify({question,planId,history,localDate:localDay(),previousIds:sources.map(p=>p.id)})});const result=await r.json();if(!r.ok)throw Error(result.error);history.push({role:'user',content:question});render(result);}catch(e){verse=0;const p=document.createElement('p');p.textContent=['AbortError','TimeoutError'].includes(e.name)?(currentLanguage()==='es'?'La respuesta se detuvo. Puedes volver a intentarlo.':'The reply stopped. You can try again.'):t(e.message);$('reply').replaceChildren(p);if(!$('question').value)$('question').value=question;}finally{clearInterval(waitingPoll);requestInFlight=false;replyController=null;$('cancel-reply').hidden=true;if(!typing)unlock();}
 }
+$('cancel-reply').onclick=()=>replyController?.abort();
 $('form').onsubmit=e=>{e.preventDefault();const q=$('question').value.trim();if(!q)return;$('question').value='';$('question').style.height='auto';ask(q);};
 $('question').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();if(!$('send').disabled)$('form').requestSubmit();}};
 $('question').oninput=()=>{$('question').style.height='auto';$('question').style.height=Math.min($('question').scrollHeight,130)+'px';};

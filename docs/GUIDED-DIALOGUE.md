@@ -111,26 +111,48 @@ not scholarly validation or a guarantee of teaching quality.
 
 ## Source-first teaching
 
-New substantive questions now prioritize actual source passages. The model
-selects up to two relevant IDs; the server copies the stored translation into
+Substantive questions and follow-ups prioritize actual source passages. The model
+selects one relevant ID; the server copies the stored translation into
 quoted dialogue blocks without paraphrasing, shortening, or inventing lines.
-Selection favors canonical verses, stories, similes, and dialogues when relevant,
-including the Dhammapada. It can select technical exposition when that answers
-the question better. The normal 200-word browser pages preserve the full chunks.
+Selection weighs semantic scope: open questions favor substantial narratives,
+dialogues, or extended teachings; focused details favor concise verses or precise
+passages. Relevance takes priority over form, including when technical exposition
+is the best answer. Broad questions first offer substantial narrative/dialogue
+candidates for relevance selection; if none fits, selection retries the general
+pool rather than forcing an unrelated story. Broad readings may include the following same-edition chunk.
+The normal 200-word browser pages preserve the full chunks.
 This works across eligible imported texts, not just curated examples.
 
-Continue, clarification, and requests to explain the preceding teaching enter
-the grounded discussion path. A new topic or request for another quotation
-returns to source selection. Social conversation and identity questions retain
+Continue first finishes browser pages, then fetches the next ordered chunks
+directly from SQLite, without calling the model. `sourceThread` in the saved
+response records topic, scope, seen source IDs, and the next passage ID.
+Dhammapada verses do not automatically advance through unrelated verses.
+Other follow-up questions seek relevant unread passages. Generated explanation
+is a fallback only when this bounded retrieval and source selection yield no
+further suitable text, marked `generatedExplanation`. This does not establish
+that the entire canon is exhausted. New topics start a new search.
+Social conversation and identity questions retain
 their existing behavior. Selection can still be imperfect: citations expose
 the edition, speaker metadata, genre, and surrounding context for checking.
 An excerpt is not necessarily a complete story, and narrator/disciples' words
 are not silently rewritten as the Buddha's own speech.
 
 Spanish profiles see the exact installed English source with a language label
-and can ask for explanation in Spanish. These source-first quotes are never
+and can ask questions in Spanish. These source-first quotes are never
 silently replaced by machine translations. Saved responses retain the quoted
 text and source IDs; model-generated explanations remain distinct from quotes.
+
+Pending requests have a Cancel control and a 245-second browser timeout.
+The server imposes a 240-second total request deadline and cancels model work
+when the client disconnects, with a 120-second ceiling per inference. Errors and
+cancellation release the composer and restore the submitted question for retry.
+These bounds replace the former unbounded browser wait and per-inference-only
+timeout, which could leave Continue apparently frozen during multiple model calls.
+While waiting, the scene describes an unnamed seated man listening. When the
+server enters generated explanation, a profile-scoped status endpoint switches
+the narration to the man taking time to consider the question. This is authored
+scene narration, not scripture or a claim that an AI has attained awakening.
+The character can evoke the Buddha without being assigned that historical identity.
 
 ## Depth and faithful reading
 

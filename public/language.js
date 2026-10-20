@@ -33,7 +33,7 @@ export function setLanguage(value){
   [...document.getElementById('scene-preview').options].forEach((option,i)=>{option.textContent=phases[i];});
   for(const prefix of ['welcome','player']){
     document.getElementById(`${prefix}-minutes-label`).textContent=language==='es'?'Minutos de meditación por hora':'Meditation minutes per hour';
-    document.getElementById(`${prefix}-meditation-note`).textContent=language==='es'?'El Buda elige cuándo sentarse mientras la aplicación está abierta.':'The Buddha chooses when to sit while the app is open.';
+    document.getElementById(`${prefix}-meditation-note`).textContent=language==='es'?'El maestro elige cuándo sentarse mientras la aplicación está abierta.':'The teacher chooses when to sit while the app is open.';
   }
   document.title=language==='es'?'Bajo el árbol de Bodhi':'Beneath the Bodhi Tree';
   const labels={'welcome-title':'Welcome','welcome-intro':'How shall I call you?','username-label':'Username','language-label':'Language','begin':'Begin','profile-title':'Your path','profile-name-label':'Username','profile-focus-label':'What would you like to practice or understand?','profile-notes-label':'What should I remember about your learning?','profile-language-label':'Language','save-profile':'Save','forget-profile':'Forget my profile and conversations','reveal':'Show all','next':'Continue →','continue-dialogue':'Continue →'};

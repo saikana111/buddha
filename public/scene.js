@@ -51,7 +51,7 @@ document.getElementById('scene-preview').addEventListener('change',event=>{
 export function setAvatarState(state) { scene.dataset.state = state; updatePause(); }
 function updatePause() {
   scene.classList.toggle('paused', paused || document.hidden);
-  scene.setAttribute('aria-label', `${scene.dataset.arrival==='waiting'?'A quiet grove':scene.dataset.arrival==='glimpse'?'A seated figure appearing beneath a bodhi tree':'The Buddha beneath a bodhi tree'} at ${scene.dataset.phase || 'twilight'}. ${symbols[scene.dataset.phase] || ''} Animation ${paused ? 'paused' : 'playing'}. Click or press Space to ${paused ? 'play' : 'pause'}.`);
+  scene.setAttribute('aria-label', `${scene.dataset.arrival==='waiting'?'A quiet grove':scene.dataset.arrival==='glimpse'?'A seated figure appearing beneath a bodhi tree':'A seated teacher beneath a bodhi tree'} at ${scene.dataset.phase || 'twilight'}. ${symbols[scene.dataset.phase] || ''} Animation ${paused ? 'paused' : 'playing'}. Click or press Space to ${paused ? 'play' : 'pause'}.`);
 }
 function toggle() { paused = !paused; updatePause(); }
 scene.addEventListener('click', toggle);
