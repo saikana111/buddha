@@ -114,9 +114,9 @@ test('ordinary motion uses slow sprite blinks before revealing the opening',asyn
   sandbox.fetch=async()=>({ok:false});
   vm.runInContext('configured=true;',sandbox);
   await vm.runInContext('enterGrove()',sandbox);
-  assert.deepEqual(phases.slice(0,6),['waiting','glimpse','waiting','glimpse','waiting','ready']);
+  assert.deepEqual(phases.slice(0,8),['waiting','glimpse','waiting','glimpse','waiting','glimpse','waiting','ready']);
   assert.ok(timings.every(Boolean));
-  assert.deepEqual(delays,[6000,650,650,650,650]);
+  assert.deepEqual(delays,[6000,220,220,220,220,850,280]);
 });
 
 test('returning players skip the entrance and keep the saved dialogue',async()=>{
@@ -140,7 +140,7 @@ test('first meeting waits for image decoding and blinks even with ambient reduce
     return {ok:true,json:async()=>({passages:[{id:'dhp183',text:'To purify the mind.'}]})};
   };
   await vm.runInContext('enterGrove()',f.sandbox);
-  assert.deepEqual(phases.slice(0,6),['waiting','glimpse','waiting','glimpse','waiting','ready']);
+  assert.deepEqual(phases.slice(0,8),['waiting','glimpse','waiting','glimpse','waiting','glimpse','waiting','ready']);
   assert.equal(markRequests,1);
   assert.equal(vm.runInContext('hasMet',f.sandbox),true);
 });

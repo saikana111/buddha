@@ -102,7 +102,8 @@ The page cursor is not persisted; returning players restore their last response
 with the Buddha already seated. Only a profile's first meeting plays the grove
 entrance and opening verse. Completion is stored in `players.met_buddha`;
 existing configured profiles migrate as already met, and forgetting a profile
-resets it. The sprite is decoded before two slow visible/hidden blinks, including
+resets it. The sprite is decoded before two quick visible/hidden blinks followed
+by a longer third appearance, including
 when ambient animation is paused or reduced. The pedagogical encounter
 stage is persisted. Automated tests
 cover paging, source boundaries, player isolation, continuation, and the

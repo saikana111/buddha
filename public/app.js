@@ -53,10 +53,14 @@ async function enterGrove(){
     await new Promise(resolve=>setTimeout(resolve,6000));
     if(!valid())return;
     {
-      // Explicit, slow visibility changes also work when ambient motion is paused.
-      for(const state of ['glimpse','waiting','glimpse','waiting']){
+      // Two quick blinks, then a longer third appearance before settling.
+      for(const [state,duration] of [
+        ['glimpse',220],['waiting',220],
+        ['glimpse',220],['waiting',220],
+        ['glimpse',850],['waiting',280]
+      ]){
         arrivalState(state);
-        await new Promise(resolve=>setTimeout(resolve,650));
+        await new Promise(resolve=>setTimeout(resolve,duration));
         if(!valid())return;
       }
     }
