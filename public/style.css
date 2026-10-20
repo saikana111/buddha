@@ -142,3 +142,10 @@ body{height:var(--viewport-height,100dvh)}
 @keyframes moon-release{0%,100%{transform:translateX(0);opacity:.4}25%{transform:translateX(70%);opacity:.25}45%,75%{transform:translateX(130%);opacity:.08}}
 @keyframes firefly-drift{0%,100%{opacity:.3;transform:translate(0,8px)}25%{opacity:.95;transform:translate(12px,-7px)}50%{opacity:.4;transform:translate(-5px,-23px)}75%{opacity:1;transform:translate(-14px,-8px)}}
 @media(prefers-reduced-motion:reduce){.scene *,.scene *::before,.scene *::after{animation:none!important;transition:none!important}.scene[data-phase=sunrise] .scene-leaves{display:none}.scene[data-phase=night] .cloud-one{transform:translateX(110%)}}
+/* The arrival affects only the character layers, independent of daylight palettes. */
+.scene[data-arrival="waiting"] .scene-avatar,
+.scene[data-arrival="waiting"] .scene-halo,
+.scene[data-arrival="waiting"] .avatar-shadow{opacity:0;visibility:hidden}
+.scene[data-arrival="glimpse"] .scene-avatar{opacity:.6}
+.scene[data-arrival="glimpse"] .scene-halo{opacity:.25}
+.scene[data-arrival="glimpse"] .avatar-shadow{opacity:.35}

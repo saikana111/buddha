@@ -8,7 +8,7 @@ function fixture(){
   const elements=new Map();
   const element=id=>{
     if(!elements.has(id))elements.set(id,{
-      value:'',style:{},disabled:true,firstElementChild:{textContent:''},
+      value:'',style:{},dataset:{},disabled:true,firstElementChild:{textContent:''},
       addEventListener(){},replaceChildren(){},append(){},focus(){this.focused=true;},
       setAttribute(){},showModal(){},close(){}
     });
@@ -23,6 +23,7 @@ function fixture(){
     t:x=>x,setLanguage(){},currentLanguage:()=> 'en',setAvatarState(){},dialoguePages,
     isMeditating:()=>meditating,initMeditationUI:async()=>{},localDay:()=> '2026-10-20',
     fetch:()=>new Promise(()=>{}),clearInterval(){},setInterval(){},
+    setTimeout:resolve=>resolve(),AbortSignal,
   });
   vm.runInContext(readFileSync(new URL('./public/app.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,''),sandbox);
   sandbox.fetch=async()=>({ok:true,json:async()=>profile});
@@ -70,4 +71,49 @@ test('a long verse finishes its pages before showing next-verse navigation',()=>
   f.element('continue-dialogue').onclick();
   assert.equal(f.element('next').hidden,false);
   assert.equal(f.element('continue-dialogue').hidden,true);
+});
+
+test('arrival shows the sourced opening without changing saved conversation history',async()=>{
+  const f=fixture();
+  f.sandbox.fetch=async()=>({ok:true,json:async()=>({passages:[{id:'dhp183',text:'To purify the mind.'}]})});
+  vm.runInContext("history=[{role:'user',content:'Earlier question'}];",f.sandbox);
+  await vm.runInContext('enterGrove()',f.sandbox);
+  assert.equal(f.element('living-scene').dataset.arrival,'ready');
+  assert.equal(f.element('question').disabled,false);
+  assert.equal(f.element('continue-dialogue').hidden,true);
+  assert.equal(vm.runInContext('history.length',f.sandbox),1);
+  assert.equal(vm.runInContext('sources[0].id',f.sandbox),'dhp183');
+});
+
+test('failed opening fetch still reveals the avatar and unlocks writing',async()=>{
+  const f=fixture();f.sandbox.fetch=async()=>{throw Error('offline');};
+  await vm.runInContext('enterGrove()',f.sandbox);
+  assert.equal(f.element('living-scene').dataset.arrival,'ready');
+  assert.equal(f.element('question').disabled,false);
+});
+
+test('arrival respects an existing meditation session',async()=>{
+  const f=fixture();f.meditate();let requests=0;
+  f.sandbox.fetch=async()=>{requests++;};
+  await vm.runInContext('enterGrove()',f.sandbox);
+  assert.equal(requests,0);
+  assert.equal(f.element('living-scene').dataset.arrival,'ready');
+  assert.equal(f.element('question').disabled,true);
+});
+
+test('ordinary motion uses slow sprite blinks before revealing the opening',async()=>{
+  const f=fixture();
+  // Re-evaluate a motion-enabled fixture with the same controlled clock.
+  const code=readFileSync(new URL('./public/app.js',import.meta.url),'utf8')
+    .replace(/^import .*;\r?\n/gm,'').replace("const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;","const reduced=false;");
+  const phases=[],timings=[];
+  const sandbox=vm.createContext({...f.sandbox,fetch:()=>new Promise(()=>{})});
+  vm.runInContext(code,sandbox);
+  sandbox.setAvatarState=()=>phases.push(f.element('living-scene').dataset.arrival);
+  sandbox.setTimeout=resolve=>{timings.push(f.element('question').disabled);resolve();};
+  sandbox.fetch=async()=>({ok:false});
+  vm.runInContext('configured=true;',sandbox);
+  await vm.runInContext('enterGrove()',sandbox);
+  assert.deepEqual(phases.slice(0,6),['waiting','glimpse','waiting','glimpse','waiting','ready']);
+  assert.ok(timings.every(Boolean));
 });

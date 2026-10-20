@@ -5,6 +5,49 @@ import { dialoguePages } from './dialogue-pages.js';
 const $=id=>document.getElementById(id);
 let history=[],sources=[],verse=0,typing=null,finish=null,configured=false,requestInFlight=false,pages=[],pageIndex=0,canContinue=false;
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let arriving=false,arrivalGeneration=0;
+function arrivalState(state){$('living-scene').dataset.arrival=state;setAvatarState(isMeditating()?'meditating':'idle');}
+async function enterGrove(){
+  const generation=++arrivalGeneration;
+  if(isMeditating()){arrivalState('ready');return;}
+  arriving=true;clearInterval(typing);typing=null;finish=null;
+  $('send').disabled=true;$('question').disabled=true;
+  for(const id of ['next','continue-dialogue','reveal'])$(id).hidden=true;
+  arrivalState('waiting');
+  const narration=document.createElement('p');
+  narration.textContent=currentLanguage()==='es'
+    ?'Entre las hojas que susurran, distingues una silueta sentada bajo el árbol. Te acercas. Todo parece aquietarse.'
+    :'Beyond the whispering leaves, you glimpse a seated silhouette beneath the tree. You draw closer. The grove seems to grow still.';
+  $('reply').replaceChildren(narration);
+  const valid=()=>generation===arrivalGeneration&&!isMeditating();
+  const opening=fetch('/api/dhammapada?verse=183',{signal:AbortSignal.timeout(6000)})
+    .then(r=>r.ok?r.json():null).catch(()=>null);
+  try{
+    await new Promise(resolve=>setTimeout(resolve,reduced?1800:3200));
+    if(!valid())return;
+    if(!reduced){
+      // Slow, stepped sprite appearances, not rapid flashing.
+      for(const state of ['glimpse','waiting','glimpse','waiting']){
+        arrivalState(state);
+        await new Promise(resolve=>setTimeout(resolve,550));
+        if(!valid())return;
+      }
+    }
+    arrivalState('ready');
+    const result=await opening;if(!valid())return;
+    arriving=false;
+    const savedHistory=history.slice();
+    render(result?.passages?.length?result:{notice:currentLanguage()==='es'?'Acércate. ¿Qué deseas comprender?':'Come closer. What do you wish to understand?'});
+    history=savedHistory;
+    canContinue=false;verse=0;
+    if(!typing)unlock();
+  }finally{
+    if(generation===arrivalGeneration){
+      arriving=false;arrivalState('ready');
+      if(!typing)unlock();
+    }
+  }
+}
 function sourceButton(id){const b=document.createElement('button');b.className='citation';b.type='button';b.textContent='['+(sources.findIndex(p=>p.id===id)+1)+']';b.setAttribute('aria-label',t("Read source passage"));b.onclick=()=>openSource(id);return b;}
 function openSource(id){const p=sources.find(p=>p.id===id);if(!p)return;const box=$('source-content');box.replaceChildren();const h=document.createElement('h2');h.textContent=p.title;const meta=document.createElement('small');meta.textContent=`${p.tradition} · ${p.collection} · ${p.translator}`;const q=document.createElement('blockquote');q.textContent=p.text;const a=document.createElement('a');a.href=p.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=t("Read the complete source ↗");const note=document.createElement('p');const small=document.createElement('small');small.textContent=t("The dialogue is an AI portrayal, not a historical quotation. This excerpt comes from the source text; its formatting is normalized. Attribution of speakers depends on the original context.");note.append(small);const provenance=document.createElement('details');const summary=document.createElement('summary');summary.textContent=t("Edition and original language");const pre=document.createElement('pre');pre.textContent=`${p.source} · ${p.license}\n${p.licenseStatement}\n\nSegments: ${p.segmentIds.join(', ')}\nRevision: ${p.commit}\n\n${p.original||'Original-language alignment is not available for this passage.'}`;provenance.append(summary,pre);box.append(h,meta,q,a,note,provenance);appendContext(box,p);$('source-dialog').showModal();}
 $('close-source').onclick=()=>$('source-dialog').close();
@@ -32,7 +75,7 @@ function appendContext(box,passage){
   }catch(error){loaded=false;const p=document.createElement('p');p.textContent=error.message;details.append(p);}
  });
 }
-function unlock(){if(!configured||isMeditating())return;setAvatarState('idle');$('send').disabled=false;$('question').disabled=false;$('reveal').hidden=true;const morePages=pageIndex+1<pages.length;$('next').hidden=!verse||morePages;$('continue-dialogue').hidden=!canContinue||(!!verse&&!morePages);$('question').focus();}
+function unlock(){if(!configured||isMeditating()||arriving)return;setAvatarState('idle');$('send').disabled=false;$('question').disabled=false;$('reveal').hidden=true;const morePages=pageIndex+1<pages.length;$('next').hidden=!verse||morePages;$('continue-dialogue').hidden=!canContinue||(!!verse&&!morePages);$('question').focus();}
 async function restoreAfterMeditation(){
   // Restoring an empty history does not call render(), and profile fetches can fail.
   // Neither case may leave the composer locked after a completed sitting.
@@ -65,7 +108,7 @@ $('continue-dialogue').onclick=()=>{
   if(pageIndex+1<pages.length){pageIndex++;showDialoguePage();}
   else return ask(currentLanguage()==='es'?'Continúa, por favor.':'Please continue.');
 };
-async function ask(question,planId){if(isMeditating())return;if(!configured){showWelcome();return;}requestInFlight=true;setAvatarState('listening');verse=0;const m=question.match(/(?:dhammapada|dhp)\s*(?:(?:verse|verso)\s*)?(\d{1,3})\b/i);if(m&&!/explain|mean|interpret|story|stories|background|commentary|explica|significa|historia|comentario/i.test(question))verse=Number(m[1]);if(/^\s*(read|recite|start|begin|teach me)\s+(the\s+)?dhammapada[.!?]?\s*$/i.test(question)){question='Dhammapada verse 1';verse=1;}
+async function ask(question,planId){if(isMeditating()||arriving)return;if(!configured){showWelcome();return;}requestInFlight=true;setAvatarState('listening');verse=0;const m=question.match(/(?:dhammapada|dhp)\s*(?:(?:verse|verso)\s*)?(\d{1,3})\b/i);if(m&&!/explain|mean|interpret|story|stories|background|commentary|explica|significa|historia|comentario/i.test(question))verse=Number(m[1]);if(/^\s*(read|recite|start|begin|teach me)\s+(the\s+)?dhammapada[.!?]?\s*$/i.test(question)){question='Dhammapada verse 1';verse=1;}
   $('send').disabled=true;$('question').disabled=true;$('next').hidden=true;$('continue-dialogue').hidden=true;const waiting=document.createElement('p');waiting.textContent='…';waiting.className='waiting';$('reply').replaceChildren(waiting);
   try{const r=await fetch('/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,planId,history,localDate:localDay(),previousIds:sources.map(p=>p.id)})});const result=await r.json();if(!r.ok)throw Error(result.error);history.push({role:'user',content:question});render(result);}catch(e){verse=0;const p=document.createElement('p');p.textContent=t(e.message);$('reply').replaceChildren(p);unlock();}finally{requestInFlight=false;}
 }
@@ -93,7 +136,8 @@ async function loadProfile(restore=false){
   for(const item of memory.learning){const p=document.createElement('p');p.textContent=`${t(item.topic)}: ${item.discussions} ${t('discussions')}. ${item.needsReview?t('You mentioned difficulty; worth revisiting.'):t('Understanding not yet assessed.')}`;if(item.evidence){const small=document.createElement('small');small.textContent=` ${t('You said:')} ${item.evidence}`;p.append(small);}$('learning-notes').append(p);}
   $('past-chats').textContent=memory.history.map(m=>`${m.role==='user'?t('You'):t('Reply')}: ${m.content}`).join('\n\n');
   if(restore){history=memory.history;if(memory.lastResponse){render(memory.lastResponse);finish?.();history=memory.history;}else if(player.name){$('reply').firstElementChild.textContent=currentLanguage()==='es'?`Hola, ${player.name}. ${t('What is on your mind?')}`:`Welcome, ${player.name}. What is on your mind?`;}}
-  if(configured)await initMeditationUI({isBusy:()=>requestInFlight||!!typing,onEnd:restoreAfterMeditation});
+  if(configured)await initMeditationUI({isBusy:()=>arriving||requestInFlight||!!typing,onEnd:restoreAfterMeditation});
+  return memory;
 }
 function showWelcome(){
   $('send').disabled=true;$('question').disabled=true;
@@ -132,13 +176,13 @@ $('welcome-form').onsubmit=async e=>{
     const r=await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,meditationMinutes:Number($('welcome-minutes').value),language:$('welcome-language').value,focus:$('player-focus').value,notes:$('player-notes').value})});
     if(!r.ok)throw Error((await r.json()).error);
     await loadProfile();$('welcome-dialog').close();
-    $('reply').replaceChildren();const p=document.createElement('p');p.textContent=currentLanguage()==='es'?`Hola, ${name}. ${t('What is on your mind?')}`:`Welcome, ${name}. What is on your mind?`;$('reply').append(p);unlock();
+    await enterGrove();
   }catch(error){$('welcome-status').textContent=t(error.message);}finally{$('begin').disabled=false;}
 };
 $('open-profile').onclick=async()=>{$('profile-dialog').showModal();try{await loadProfile();}catch(e){$('profile-status').textContent=t(e.message);}};
 $('close-profile').onclick=()=>$('profile-dialog').close();
 $('profile-form').onsubmit=async event=>{event.preventDefault();try{const r=await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('player-name').value,meditationMinutes:Number($('player-minutes').value),focus:$('player-focus').value,notes:$('player-notes').value,language:$('player-language').value})});if(!r.ok)throw Error((await r.json()).error);setLanguage($('player-language').value);await refreshMeditation();$('profile-status').textContent=t("Saved.");}catch(e){$('profile-status').textContent=t(e.message);}};
-$('forget-profile').onclick=async()=>{if(!confirm(t("Delete this player’s saved profile and all their conversations?")))return;try{const r=await fetch('/api/profile',{method:'DELETE'});if(!r.ok)throw Error(t("Could not forget this profile."));resetMeditationUI();history=[];sources=[];verse=0;clearInterval(typing);finish=null;$('reply').replaceChildren();const p=document.createElement('p');p.textContent=t("What is on your mind?");$('reply').append(p);await loadProfile();$('profile-dialog').close();showWelcome();}catch(e){$('profile-status').textContent=t(e.message);}};
+$('forget-profile').onclick=async()=>{if(!confirm(t("Delete this player’s saved profile and all their conversations?")))return;try{const r=await fetch('/api/profile',{method:'DELETE'});if(!r.ok)throw Error(t("Could not forget this profile."));arrivalGeneration++;arriving=false;arrivalState('waiting');resetMeditationUI();history=[];sources=[];verse=0;clearInterval(typing);finish=null;$('reply').replaceChildren();const p=document.createElement('p');p.textContent=t("What is on your mind?");$('reply').append(p);await loadProfile();$('profile-dialog').close();showWelcome();}catch(e){$('profile-status').textContent=t(e.message);}};
 // Establish the cookie before allowing the first conversation to avoid racing identities.
 $('send').disabled=true;$('question').disabled=true;
-loadProfile(true).then(()=>{if(!configured)showWelcome();else unlock();}).catch(e=>{showWelcome();$('welcome-status').textContent=t(e.message);});
+loadProfile().then(async memory=>{history=memory.history;if(!configured)showWelcome();else await enterGrove();}).catch(e=>{showWelcome();$('welcome-status').textContent=t(e.message);});
