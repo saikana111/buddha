@@ -1,4 +1,6 @@
 import { dialogueProfile } from './lib/persona.mjs';
+import {initCanonical,canonicalCoverage,canonicalText,searchCanonical,passageContext} from './lib/canonical.mjs';
+import {initKnowledge,relatedTeachings,passageConnections} from './lib/knowledge-map.mjs';
 import {inquiryMode,inquiryAnchors,inquiryPrompt,identityReply} from './lib/inquiry.mjs';
 import {meditationState,meditationCommand,clearMeditation} from './lib/meditation.mjs';
 import {teachingState,clearTeaching,prepareTeaching,lessonSources,teachingPrompt,recordLessonReply} from './lib/teaching.mjs';
@@ -10,6 +12,8 @@ import { openLibrary, libraryStats, retrieve, passageById } from './lib/corpus.m
 import { validateAnswer } from './lib/answer.mjs';
 const db=openLibrary();
 initPlayers(db);
+initCanonical(db);
+initKnowledge(db);
 const host='http://127.0.0.1:11434';
 const installed=await fetch(`${host}/api/tags`).then(r=>r.json()).catch(()=>({models:[]}));
 const model=process.env.BUDDHA_MODEL || (installed.models?.some(m=>m.name==='qwen3.5:4b')?'qwen3.5:4b':'qwen2.5:3b');
@@ -68,7 +72,21 @@ const server=http.createServer(async(req,res)=>{
     const assets={'/assets/temple-bell.ogg':['public/assets/temple-bell.ogg','audio/ogg'],'/assets/singing-bowl-struck.ogg':['public/assets/singing-bowl-struck.ogg','audio/ogg'],'/assets/singing-bowl-rubbed.ogg':['public/assets/singing-bowl-rubbed.ogg','audio/ogg'],'/assets/meditation-bell.wav':['public/assets/meditation-bell.wav','audio/wav'],'/assets/buddha-meditating.png':['public/assets/buddha-meditating.png','image/png'],'/assets/bodhi-retro-vivid.png':['public/assets/bodhi-retro-vivid.png','image/png'],'/assets/buddha-retro.png':['public/assets/buddha-retro.png','image/png'],'/assets/bodhi-retro.png':['public/assets/bodhi-retro.png','image/png'],'/assets/buddha-cel.png':['public/assets/buddha-cel.png','image/png'],'/assets/bodhi-cel-background.png':['public/assets/bodhi-cel-background.png','image/png'],'/scene.js':['public/scene.js','text/javascript; charset=utf-8'],'/':['public/index.html','text/html; charset=utf-8'],'/app.js':['public/app.js','text/javascript; charset=utf-8'],'/style.css':['public/style.css','text/css; charset=utf-8'],'/assets/bodhi-dawn.png':['public/assets/bodhi-dawn.png','image/png']};
     if(req.method==='GET'&&assets[url.pathname]){const [file,type]=assets[url.pathname];res.writeHead(200,{'Content-Type':type,'Cache-Control':type==='image/png'?'public,max-age=86400':'no-cache','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; style-src 'self'; img-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'"});return res.end(await readFile(file));}
     if(req.method==='GET'&&url.pathname==='/api/status')return send(res,200,{model,...stats,imports:stats.imports.map(({skipped,...r})=>({...r,skipped:skipped.length})),mode:'Local retrieval-augmented dialogue; no weight training'});
-    if(req.method==='GET'&&url.pathname==='/api/canon')return send(res,200,JSON.parse(await readFile('data/tipitaka-coverage.json','utf8')));
+    if(req.method==='GET'&&url.pathname==='/api/canon')return send(res,200,{books:canonicalCoverage(db),note:'Counts distinguish Pāli segments from exact segment links to English passages. Legacy translations without shared IDs are not counted as aligned.'});
+    if(req.method==='GET'&&url.pathname==='/api/canon/search')return send(res,200,{language:'pli',results:searchCanonical(db,(url.searchParams.get('q')||'').slice(0,500),{book:url.searchParams.get('book')||undefined})});
+    if(req.method==='GET'&&url.pathname==='/api/canon/text'){
+      const offset=Number(url.searchParams.get('offset')||0);if(!Number.isSafeInteger(offset)||offset<0)return send(res,400,{error:'Invalid offset'});
+      const result=canonicalText(db,url.searchParams.get('uid'),{offset});return send(res,result?200:404,result||{error:'Pāli text not indexed. Run npm run index:canon after acquiring the expanded sources.'});
+    }
+    if(req.method==='GET'&&url.pathname==='/api/context'){
+      const id=url.searchParams.get('id'),result=passageContext(db,id);
+      return send(res,result?200:404,result?{...result,connections:passageConnections(db,id)}:{error:'Passage not found'});
+    }
+    if(req.method==='GET'&&url.pathname==='/api/concepts'){
+      const layer=url.searchParams.get('layer')||'canonical-teaching';
+      if(!['canonical-teaching','historical-context'].includes(layer))return send(res,400,{error:'Unknown relationship layer'});
+      return send(res,200,relatedTeachings(db,(url.searchParams.get('q')||'').slice(0,500),{hops:2,layer}));
+    }
     if(req.method==='GET'&&url.pathname==='/api/passage'){const p=passageById(db,url.searchParams.get('id'));return send(res,p?200:404,p||{error:'Passage not found'});}
     if(req.method==='GET'&&url.pathname==='/api/dhammapada'){
       const n=Number(url.searchParams.get('verse')||1);if(!Number.isInteger(n)||n<1||n>423)return send(res,400,{error:'Choose a verse from 1 to 423'});
@@ -134,6 +152,12 @@ const server=http.createServer(async(req,res)=>{
       const followup=/\b(that|this|it|those|them|more|continue|eso|esto|continua|más)\b/i.test(question)&&question.length<140;
       const searchQuestion=followup?`${previousQuestion} ${question}`:question;
       let candidates=retrieve(db,searchQuestion,{expanded:conceptHint(question)?.terms||(typeof plan.terms==='string'?plan.terms:''),tradition:traditionFor(searchQuestion),limit:8});
+      // Graph links only nominate original passages; unreviewed relation labels are never LLM evidence.
+      const related=relatedTeachings(db,searchQuestion,{hops:1,tradition:traditionFor(searchQuestion)});
+      if(!/\b(?:dhp|dhammapada)\s*(?:verse|verso)?\s*\d/i.test(searchQuestion)){
+        const combined=[...candidates.slice(0,2),...related.passages,...candidates.slice(2)];
+        candidates=[...new Map(combined.map(p=>[p.id,p])).values()].slice(0,8);
+      }
       const lessonPassages=lessonSources(db,teaching);
       if(lessonPassages.length)candidates=lessonPassages;
       if(inquiry && !/tibetan|kangyur|tengyur|chinese|agama|mahayan/i.test(searchQuestion)){

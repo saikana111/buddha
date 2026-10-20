@@ -21,6 +21,8 @@ The bundled corpus imports without internet. Installing npm packages and acquiri
 
 `npm run import` downloads additional corpora and builds the broader library. See [CORPORA.md](CORPORA.md) for sources, exact revisions, permissions, offline rebuilding and recovery. The broader development library has 7,725 records and 133,916 passages; the bundled edition intentionally has less coverage.
 
+Both import paths also build the evidence-linked concept map. The expanded import additionally indexes Pāli source segments. To upgrade an existing installation without downloading/rebuilding its entire translated library, stop the app and run `npm run index:canon` followed by `npm run index:concepts`; then restart. The first command needs the already acquired Bilara archive. Both update only library indexes, preserving player data.
+
 ## Verification and maintenance
 
 ```powershell

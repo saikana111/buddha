@@ -1,4 +1,6 @@
 import { importStories } from './import-stories.mjs';
+import {indexCanonical} from './index-canonical.mjs';
+import {indexKnowledgeMap} from '../lib/knowledge-map.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -60,6 +62,8 @@ try {
   for(const kind of ['abhidhamma','khuddaka','parallels']){const legacyReport=importLegacy(db,kind);if(legacyReport)reports.push(legacyReport);}
   const stories=importStories(db);if(stories)reports.push(stories);
   inventoryTipitaka(db);
+  indexCanonical(db);
+  indexKnowledgeMap(db);
   for(const report of reports)db.prepare('INSERT INTO imports VALUES(?,?)').run(report.source,JSON.stringify(report));
   db.exec("INSERT INTO search(search) VALUES('rebuild'); COMMIT;");
   const stats=libraryStats(db);fs.writeFileSync('data/coverage.json',JSON.stringify(stats,null,2));console.log(JSON.stringify({...stats,imports:reports.map(({skipped,...r})=>({...r,skipped:skipped.length}))},null,2));

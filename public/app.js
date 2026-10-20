@@ -5,8 +5,32 @@ const $=id=>document.getElementById(id);
 let history=[],sources=[],verse=0,typing=null,finish=null,configured=false,requestInFlight=false;
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function sourceButton(id){const b=document.createElement('button');b.className='citation';b.type='button';b.textContent='['+(sources.findIndex(p=>p.id===id)+1)+']';b.setAttribute('aria-label',t("Read source passage"));b.onclick=()=>openSource(id);return b;}
-function openSource(id){const p=sources.find(p=>p.id===id);if(!p)return;const box=$('source-content');box.replaceChildren();const h=document.createElement('h2');h.textContent=p.title;const meta=document.createElement('small');meta.textContent=`${p.tradition} · ${p.collection} · ${p.translator}`;const q=document.createElement('blockquote');q.textContent=p.text;const a=document.createElement('a');a.href=p.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=t("Read the complete source ↗");const note=document.createElement('p');const small=document.createElement('small');small.textContent=t("The dialogue is an AI portrayal, not a historical quotation. This excerpt comes from the source text; its formatting is normalized. Attribution of speakers depends on the original context.");note.append(small);const provenance=document.createElement('details');const summary=document.createElement('summary');summary.textContent=t("Edition and original language");const pre=document.createElement('pre');pre.textContent=`${p.source} · ${p.license}\n${p.licenseStatement}\n\nSegments: ${p.segmentIds.join(', ')}\nRevision: ${p.commit}\n\n${p.original||'Original-language alignment is not available for this passage.'}`;provenance.append(summary,pre);box.append(h,meta,q,a,note,provenance);$('source-dialog').showModal();}
+function openSource(id){const p=sources.find(p=>p.id===id);if(!p)return;const box=$('source-content');box.replaceChildren();const h=document.createElement('h2');h.textContent=p.title;const meta=document.createElement('small');meta.textContent=`${p.tradition} · ${p.collection} · ${p.translator}`;const q=document.createElement('blockquote');q.textContent=p.text;const a=document.createElement('a');a.href=p.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=t("Read the complete source ↗");const note=document.createElement('p');const small=document.createElement('small');small.textContent=t("The dialogue is an AI portrayal, not a historical quotation. This excerpt comes from the source text; its formatting is normalized. Attribution of speakers depends on the original context.");note.append(small);const provenance=document.createElement('details');const summary=document.createElement('summary');summary.textContent=t("Edition and original language");const pre=document.createElement('pre');pre.textContent=`${p.source} · ${p.license}\n${p.licenseStatement}\n\nSegments: ${p.segmentIds.join(', ')}\nRevision: ${p.commit}\n\n${p.original||'Original-language alignment is not available for this passage.'}`;provenance.append(summary,pre);box.append(h,meta,q,a,note,provenance);appendContext(box,p);$('source-dialog').showModal();}
 $('close-source').onclick=()=>$('source-dialog').close();
+function appendContext(box,passage){
+ const es=currentLanguage()==='es',details=document.createElement('details'),summary=document.createElement('summary');
+ summary.textContent=es?'Contexto y conceptos relacionados':'Surrounding text and related concepts';details.append(summary);box.append(details);
+ let loaded=false;
+ details.addEventListener('toggle',async()=>{
+  if(!details.open||loaded)return;loaded=true;
+  try{
+   const response=await fetch('/api/context?id='+encodeURIComponent(passage.id));if(!response.ok)throw Error(es?'No se pudo cargar el contexto.':'Could not load context.');
+   const data=await response.json();
+   for(const p of data.passages){
+    const label=document.createElement('small');label.textContent=(p.id===passage.id?(es?'Pasaje seleccionado':'Selected passage'):(es?'Pasaje contiguo':'Adjacent passage'))+` · ${p.id} · ${p.translator}`;
+    const quote=document.createElement('blockquote');quote.textContent=p.text;details.append(label,quote);
+   }
+   if(data.original.length){
+    const original=document.createElement('details'),title=document.createElement('summary');title.textContent=es?'Segmentos originales en pāli':'Aligned Pāli source segments';original.append(title);
+    for(const s of data.original){const p=document.createElement('p');p.textContent=`${s.id} — ${s.text}`;original.append(p);}details.append(original);
+   }
+   if(data.connections.length){
+    const note=document.createElement('p');note.textContent=es?'Relaciones propuestas, sin revisión académica; cada conexión pertenece a este pasaje.':'Proposed relationships, not yet scholarly reviewed; each connection is scoped to this passage.';details.append(note);
+    for(const edge of data.connections){const p=document.createElement('p');p.textContent=`${edge.from} → ${edge.relation} → ${edge.to}`;const q=document.createElement('blockquote');q.textContent=edge.evidence.quote;details.append(p,q);}
+   }
+  }catch(error){loaded=false;const p=document.createElement('p');p.textContent=error.message;details.append(p);}
+ });
+}
 function unlock(){if(!configured||isMeditating())return;setAvatarState('idle');$('send').disabled=false;$('question').disabled=false;$('reveal').hidden=true;$('next').hidden=!verse;$('question').focus();}
 function render(result){sources=result.passages||[];const nodes=[];for(const para of result.paragraphs||[]){const p=document.createElement('p');p.textContent=para.text;for(const id of para.ids)p.append(sourceButton(id));nodes.push(p);}
   if(!nodes.length&&sources.length){for(const src of sources){const q=document.createElement('blockquote');const translated=result.translatedExcerpts?.find(p=>p.id===src.id);q.textContent=translated?.text||src.text;if(currentLanguage()==='es'){const note=document.createElement('small');note.textContent=t(translated?'Machine-assisted translation; original in the source.':'Source excerpt (English).');nodes.push(note);}q.append(sourceButton(src.id));nodes.push(q);}}

@@ -7,7 +7,9 @@
     "test": "node --test",
     "import": "node scripts/sync-sources.mjs",
     "index": "node scripts/build-library.mjs",
-    "import:bundle": "node scripts/import-bundle.mjs"
+    "import:bundle": "node scripts/import-bundle.mjs",
+    "index:canon": "node scripts/index-canonical.mjs",
+    "index:concepts": "node scripts/build-knowledge-map.mjs"
   },
   "engines": {
     "node": ">=22.13"

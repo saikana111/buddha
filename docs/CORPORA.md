@@ -43,6 +43,18 @@ node scripts/sync-sources.mjs --update
 
 `--update` refreshes GitHub sources, not cached story pages. Old archives remain on disk. Stop the app first. Back up private player data separately. Import transactions protect existing indexed tables if parsing fails; downloads can fail before indexing without replacing the library. Retry the same command after a transient failure. Incomplete `.partial` downloads are not imported. Do not bypass checksum mismatches; investigate upstream archive changes or damaged downloads first.
 
+## Segment integration and concept links
+
+The expanded import builds `canonical_texts`, `canonical_segments`, `canonical_links` and an FTS5 Pāli search index. This snapshot contains 7,288 text records and 420,790 nonempty body segments. One Vinaya grouping file contains headings only and contributes no body segments. The index keeps source order, source URL, revision and original-file SHA-256.
+
+191,100 Pāli segments have a link to at least one imported English Bilara passage through an exact shared segment ID. These are passage-level alignments, not sentence-level translations. Heading segments and blank source values are excluded. Legacy HTML translations without shared segment IDs remain in the English library but do not count as aligned. Neither a matching text ID nor an aligned passage proves that an entire translation is complete.
+
+`npm run index:canon` rebuilds the original-language index from the acquired Bilara snapshot. `npm run index:concepts` validates and persists the authored concept graph against current source passages. Graph builds reject missing quotations and references disabled for synthesis; retrieval drops stale edges if a passage hash changes.
+
+The source popup offers adjacent passages from the same translation, aligned Pāli segments, and proposed concept connections with their evidence. English/Spanish concept aliases nominate source passages for dialogue retrieval. The relationship labels themselves are unreviewed and are not supplied to the LLM as established doctrine. Historical accounts remain a separate layer; no inference of historical influence or transitive causation is generated.
+
+Read-only local endpoints: `/api/canon` (per-book segment coverage), `/api/canon/search?q=anapanasati` (Pāli search; optional `book`), `/api/canon/text?uid=mn118&offset=0` (30 ordered segments per page), `/api/context?id=sc:sujato:mn118:1`, and `/api/concepts?q=craving`. The concept endpoint defaults to canonical-teaching links; `layer=historical-context` explicitly selects reported historical accounts. The bundled edition has concept links and surrounding English passages; full Pāli segmentation requires the expanded import.
+
 ## Rights and selection
 
 The app's license applies to original app material only. It cannot grant rights over someone else's translations or replace their terms.

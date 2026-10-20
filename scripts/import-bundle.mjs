@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
 import {openLibrary,libraryStats} from '../lib/corpus.mjs';
+import {indexKnowledgeMap} from '../lib/knowledge-map.mjs';
 const base='corpus/cc0',manifest=JSON.parse(fs.readFileSync(`${base}/manifest.json`));
 const db=openLibrary();
 let documents=0,passages=0;
@@ -25,6 +26,7 @@ try{
   }
  }
  if(documents!==manifest.documents||passages!==manifest.passages)throw Error('Bundle counts do not match');
+ indexKnowledgeMap(db);
  const report={source:'Bundled CC0',files:documents,passages,skipped:[],coverage:'CC0 Bilara subset; additional traditions require npm run import'};
  db.prepare('INSERT OR REPLACE INTO imports VALUES(?,?)').run(report.source,JSON.stringify(report));
  db.exec("INSERT INTO search(search) VALUES('rebuild'); COMMIT;");
