@@ -8,6 +8,26 @@ const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let arriving=false,arrivalGeneration=0,hasMet=false,replyController=null;
 let translating=false,pageController=null,pageGeneration=0;
 const translatedPages=new Map();
+let translationQueue=Promise.resolve(),sourceController=null;
+async function translateBlocks(blocks,signal){
+  signal.throwIfAborted();
+  const key=JSON.stringify(blocks);
+  if(translatedPages.has(key))return translatedPages.get(key);
+  const work=translationQueue.then(async()=>{
+    signal.throwIfAborted();
+    if(translatedPages.has(key))return translatedPages.get(key);
+    const r=await fetch('/api/translate-page',{method:'POST',
+      signal:AbortSignal.any([signal,AbortSignal.timeout(125000)]),
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({blocks})});
+    const result=await r.json();if(!r.ok)throw Error(result.error);
+    if(!Array.isArray(result.translations)||result.translations.length!==blocks.length||
+      result.translations.some((p,i)=>p.index!==i||typeof p.text!=='string'||!p.text.trim()))throw Error('Incomplete translation');
+    translatedPages.set(key,result.translations);
+    return result.translations;
+  });
+  translationQueue=work.catch(()=>{});
+  return work;
+}
 function waitingWords(stage){
   if(stage==='reflecting')return currentLanguage()==='es'
     ?'El hombre sentado te mira, tomándose un momento para considerar tu pregunta.'
@@ -85,20 +105,75 @@ async function enterGrove(){
   }
 }
 function sourceButton(id){const b=document.createElement('button');b.className='citation';b.type='button';b.textContent='['+(sources.findIndex(p=>p.id===id)+1)+']';b.setAttribute('aria-label',t("Read source passage"));b.onclick=()=>openSource(id);return b;}
-function openSource(id){const p=sources.find(p=>p.id===id);if(!p)return;const box=$('source-content');box.replaceChildren();const h=document.createElement('h2');h.textContent=p.title;const meta=document.createElement('small');meta.textContent=`${p.tradition} · ${p.collection} · ${p.translator}`;const q=document.createElement('blockquote');q.textContent=p.text;const a=document.createElement('a');a.href=p.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=t("Read the complete source ↗");const note=document.createElement('p');const small=document.createElement('small');small.textContent=t("The dialogue is an AI portrayal, not a historical quotation. This excerpt comes from the source text; its formatting is normalized. Attribution of speakers depends on the original context.");note.append(small);const provenance=document.createElement('details');const summary=document.createElement('summary');summary.textContent=t("Edition and original language");const pre=document.createElement('pre');pre.textContent=`${p.source} · ${p.license}\n${p.licenseStatement}\n\nSegments: ${p.segmentIds.join(', ')}\nRevision: ${p.commit}\n\n${p.original||'Original-language alignment is not available for this passage.'}`;provenance.append(summary,pre);box.append(h,meta,q,a,note,provenance);appendContext(box,p);$('source-dialog').showModal();}
-$('close-source').onclick=()=>$('source-dialog').close();
-function appendContext(box,passage){
+function citationText(container,passage,signal){
+  if(currentLanguage()!=='es'){
+    const q=document.createElement('blockquote');q.textContent=passage.text;container.append(q);
+    return {ready:Promise.resolve()};
+  }
+  const chunks=dialoguePages([{text:passage.text,ids:[passage.id],quote:true}],150);
+  const label=document.createElement('small');label.textContent='Traducción automática al español.';
+  const quote=document.createElement('blockquote'),controls=document.createElement('div');
+  quote.setAttribute('aria-live','polite');
+  controls.className='dialogue-controls';
+  const previous=document.createElement('button'),next=document.createElement('button'),retry=document.createElement('button'),position=document.createElement('small');
+  for(const b of [previous,next,retry])b.type='button';
+  previous.textContent='← Anterior';next.textContent='Siguiente →';retry.textContent='Reintentar traducción';retry.hidden=true;
+  controls.append(previous,position,next,retry);
+  const original=document.createElement('details'),summary=document.createElement('summary'),originalText=document.createElement('blockquote');
+  summary.textContent='Ver original en inglés';originalText.textContent=passage.text;original.append(summary,originalText);
+  container.append(label,quote,controls,original);
+  let index=0;
+  const load=async()=>{
+    if(signal.aborted)return;
+    previous.disabled=true;next.disabled=true;retry.hidden=true;
+    previous.hidden=chunks.length<=1;next.hidden=chunks.length<=1;
+    position.textContent=chunks.length>1?`Página ${index+1} de ${chunks.length}`:'';
+    quote.textContent='Traduciendo el pasaje al español…';
+    try{
+      const translated=await translateBlocks(chunks[index].map(b=>({text:b.text,ids:b.ids})),signal);
+      if(!signal.aborted)quote.textContent=translated.map(p=>p.text).join('\n\n');
+    }catch{
+      if(!signal.aborted){quote.textContent='No se pudo cargar la traducción. Puedes reintentar o consultar el original.';retry.hidden=false;}
+    }finally{
+      previous.disabled=index===0;next.disabled=index===chunks.length-1;
+    }
+  };
+  previous.onclick=()=>{if(index>0){index--;return load();}};
+  next.onclick=()=>{if(index+1<chunks.length){index++;return load();}};
+  retry.onclick=load;
+  return {ready:load(),next,previous,retry,quote,original};
+}
+function openSource(id){
+  const passage=sources.find(p=>p.id===id);if(!passage)return;
+  sourceController?.abort();sourceController=new AbortController();
+  const es=currentLanguage()==='es',box=$('source-content');box.replaceChildren();
+  const h=document.createElement('h2');h.textContent=es?`Pasaje citado · ${passage.id.replace(/^sc:[^:]+:/,'')}`:passage.title;
+  const meta=document.createElement('small');meta.textContent=`${passage.tradition} · ${passage.collection} · ${passage.translator}`;
+  box.append(h,meta);citationText(box,passage,sourceController.signal);
+  const link=document.createElement('a');link.href=passage.url;link.target='_blank';link.rel='noopener noreferrer';
+  link.textContent=es?'Fuente completa (inglés) ↗':t('Read the complete source ↗');
+  const provenance=document.createElement('details'),summary=document.createElement('summary'),pre=document.createElement('pre');
+  summary.textContent=t('Edition and original language');
+  pre.textContent=`${passage.title}\n${passage.source} · ${passage.license}\n${passage.licenseStatement}\n\n${es?'Segmentos':'Segments'}: ${passage.segmentIds.join(', ')}\n${es?'Revisión':'Revision'}: ${passage.commit}\n\n${passage.original||(es?'No hay alineación con el idioma original para este pasaje.':'Original-language alignment is not available for this passage.')}`;
+  provenance.append(summary,pre);box.append(link,provenance);
+  appendContext(box,passage,sourceController.signal);
+  if(!$('source-dialog').open)$('source-dialog').showModal();
+}
+$('close-source').onclick=()=>{sourceController?.abort();$('source-dialog').close();};
+$('source-dialog').addEventListener('cancel',()=>sourceController?.abort());
+$('source-dialog').addEventListener('close',()=>sourceController?.abort());
+function appendContext(box,passage,signal){
  const es=currentLanguage()==='es',details=document.createElement('details'),summary=document.createElement('summary');
  summary.textContent=es?'Contexto y conceptos relacionados':'Surrounding text and related concepts';details.append(summary);box.append(details);
  let loaded=false;
  details.addEventListener('toggle',async()=>{
   if(!details.open||loaded)return;loaded=true;
   try{
-   const response=await fetch('/api/context?id='+encodeURIComponent(passage.id));if(!response.ok)throw Error(es?'No se pudo cargar el contexto.':'Could not load context.');
+   const response=await fetch('/api/context?id='+encodeURIComponent(passage.id),{signal});if(!response.ok)throw Error(es?'No se pudo cargar el contexto.':'Could not load context.');
    const data=await response.json();
    for(const p of data.passages){
     const label=document.createElement('small');label.textContent=(p.id===passage.id?(es?'Pasaje seleccionado':'Selected passage'):(es?'Pasaje contiguo':'Adjacent passage'))+` · ${p.id} · ${p.translator}`;
-    const quote=document.createElement('blockquote');quote.textContent=p.text;details.append(label,quote);
+    details.append(label);citationText(details,p,signal);
    }
    if(data.original.length){
     const original=document.createElement('details'),title=document.createElement('summary');title.textContent=es?'Segmentos originales en pāli':'Aligned Pāli source segments';original.append(title);
@@ -106,7 +181,7 @@ function appendContext(box,passage){
    }
    if(data.connections.length){
     const note=document.createElement('p');note.textContent=es?'Relaciones propuestas, sin revisión académica; cada conexión pertenece a este pasaje.':'Proposed relationships, not yet scholarly reviewed; each connection is scoped to this passage.';details.append(note);
-    for(const edge of data.connections){const p=document.createElement('p');p.textContent=`${edge.from} → ${edge.relation} → ${edge.to}`;const q=document.createElement('blockquote');q.textContent=edge.evidence.quote;details.append(p,q);}
+    for(const edge of data.connections){const p=document.createElement('p');p.textContent=`${edge.from} → ${edge.relation} → ${edge.to}`;details.append(p);citationText(details,{...passage,text:edge.evidence.quote},signal);}
    }
   }catch(error){loaded=false;const p=document.createElement('p');p.textContent=error.message;details.append(p);}
  });
@@ -147,13 +222,7 @@ async function showDialoguePage(){
     const waiting=document.createElement('p');waiting.className='waiting';
     waiting.textContent='Traduciendo este pasaje al español…';$('reply').replaceChildren(waiting);
     try{
-      const r=await fetch('/api/translate-page',{method:'POST',
-        signal:AbortSignal.any([controller.signal,AbortSignal.timeout(125000)]),
-        headers:{'Content-Type':'application/json'},body:JSON.stringify({blocks})});
-      const result=await r.json();if(!r.ok)throw Error(result.error);
-      if(!Array.isArray(result.translations)||result.translations.length!==quoted.length||
-        result.translations.some((p,i)=>p.index!==i||typeof p.text!=='string'||!p.text.trim()))throw Error('Incomplete translation');
-      translated=result.translations;translatedPages.set(key,translated);
+      translated=await translateBlocks(blocks,controller.signal);
     }catch{failed=true;}
     finally{
       if(generation===pageGeneration){

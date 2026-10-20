@@ -7,7 +7,7 @@ const es={
   'Saved on this PC. This browser remembers your profile. Learning notes are tentative, not a judgment of your understanding.':'Guardado en este PC. Este navegador recuerda tu perfil. Las notas de aprendizaje son orientativas; no son una evaluación de tu comprensión.',
   'Show all':'Mostrar todo','Continue →':'Continuar →','Speak…':'Escribe…','Your message':'Tu mensaje','Send message':'Enviar mensaje','Send':'Enviar',
   'What is on your mind?':'¿Qué tienes en mente?','Could you tell me a little more?':'¿Podrías contarme un poco más?',
-  'Player profile and memories':'Perfil y recuerdos','Close profile':'Cerrar perfil','Close source':'Cerrar fuente','Read source passage':'Leer el pasaje original',
+  'Player profile and memories':'Perfil y recuerdos','Close profile':'Cerrar perfil','Close source':'Cerrar fuente','Read source passage':'Leer el pasaje citado',
   'Read the complete source ↗':'Leer la fuente completa ↗','Edition and original language':'Edición e idioma original',
   'The dialogue is an AI portrayal, not a historical quotation. This excerpt comes from the source text; its formatting is normalized. Attribution of speakers depends on the original context.':'El diálogo es una representación con IA, no una cita histórica. Este extracto proviene del texto fuente, con formato normalizado. La atribución de las palabras depende del contexto original.',
   'Could not load your profile.':'No se pudo cargar tu perfil.','Could not forget this profile.':'No se pudo borrar este perfil.',

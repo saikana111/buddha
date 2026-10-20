@@ -139,8 +139,12 @@ An excerpt is not necessarily a complete story, and narrator/disciples' words
 are not silently rewritten as the Buddha's own speech.
 
 Spanish profiles receive an on-demand English-to-Spanish translation of only
-the displayed source page. The UI labels it as automatic translation; citation
-buttons continue to open the untouched English edition. New generated
+the displayed source page. The UI labels it as automatic translation. Citation
+popups and requested surrounding passages also show Spanish by default, sharing
+the same cache and translating long excerpts one requested page at a time.
+English appears only in an optional “Ver original en inglés” section, and
+external edition links are labeled as English. Closing the citation cancels
+pending translation work. New generated
 explanations already use the profile language. Saved responses retain the
 English source text and IDs.
 

@@ -28,6 +28,8 @@
   about the seated man considering the question. Never mislabel invented
   narration as a canonical quotation; keep identity answers honest when asked.
 - Spanish profiles translate only displayed English source pages on demand.
-  Label this as automatic translation, retain the English citation text,
+  Citation popups and requested surrounding passages also default to Spanish,
+  sharing the dialogue cache. Label this as automatic translation and keep
+  English behind an optional original-text view,
   and cache by source content and model. Never pretranslate or overwrite the
   corpus. Cancellation or translation failure must leave the original readable.

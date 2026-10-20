@@ -233,10 +233,57 @@ test('a delayed Spanish translation cannot overwrite a later English view',async
   vm.runInContext("pages=[[{text:'The English source.',ids:['p'],quote:true}]];pageIndex=0;",f.sandbox);
   f.sandbox.fetch=()=>new Promise(r=>{resolve=r;});
   const pending=vm.runInContext('showDialoguePage()',f.sandbox);
+  await Promise.resolve(); // The shared translator starts work through its queue.
   f.sandbox.currentLanguage=()=> 'en';
   await vm.runInContext('showDialoguePage()',f.sandbox);
   resolve({ok:true,json:async()=>({translations:[{index:0,text:'La fuente.'}]})});
   await pending;
   assert.equal(f.element('reply').children[0].textContent,'The English source.');
   assert.equal(f.element('question').disabled,false);
+});
+
+test('Spanish citations reuse the dialogue translation and keep English in a collapsed optional view',async()=>{
+  const f=fixture();f.sandbox.currentLanguage=()=> 'es';let requests=0;
+  f.sandbox.fetch=async()=>{
+    requests++;return {ok:true,json:async()=>({translations:[{index:0,text:'Una enseñanza.'}]})};
+  };
+  vm.runInContext("sources=[{id:'p',text:'A teaching.'}];pages=[[{text:'A teaching.',ids:['p'],quote:true}]];pageIndex=0;",f.sandbox);
+  await vm.runInContext('showDialoguePage()',f.sandbox);
+  const widget=vm.runInContext("citationText(document.createElement('div'),sources[0],new AbortController().signal)",f.sandbox);
+  await widget.ready;
+  assert.equal(requests,1);
+  assert.equal(widget.quote.textContent,'Una enseñanza.');
+  assert.ok(!widget.original.open);
+  assert.equal(widget.original.children[0].textContent,'Ver original en inglés');
+  assert.equal(widget.original.children[1].textContent,'A teaching.');
+});
+
+test('long citations translate only requested pages and reuse earlier pages',async()=>{
+  const f=fixture();f.sandbox.currentLanguage=()=> 'es';let requests=0;
+  f.sandbox.fetch=async(_url,options)=>{
+    requests++;const {blocks}=JSON.parse(options.body);
+    assert.equal(blocks[0].text.split(' ').length,150);
+    return {ok:true,json:async()=>({translations:[{index:0,text:'Página '+requests}]})};
+  };
+  const widget=vm.runInContext("citationText(document.createElement('div'),{id:'p',text:Array.from({length:310},(_,i)=>'word'+i).join(' ')},new AbortController().signal)",f.sandbox);
+  await widget.ready;assert.equal(requests,1);
+  await widget.next.onclick();assert.equal(requests,2);
+  await widget.previous.onclick();assert.equal(requests,2);
+  assert.equal(widget.quote.textContent,'Página 1');
+});
+
+test('closing a citation cancels queued translations without poisoning later requests',async()=>{
+  const f=fixture();f.sandbox.currentLanguage=()=> 'es';let requests=0;
+  f.sandbox.fetch=(_url,{signal})=>{requests++;return new Promise((resolve,reject)=>{
+    signal.addEventListener('abort',()=>reject(signal.reason),{once:true});
+  });};
+  const widgets=vm.runInContext("sourceController=new AbortController();[citationText(document.createElement('div'),{id:'p',text:'One.'},sourceController.signal),citationText(document.createElement('div'),{id:'p',text:'Two.'},sourceController.signal)]",f.sandbox);
+  await Promise.resolve();
+  f.element('close-source').onclick();
+  await Promise.all(widgets.map(w=>w.ready));
+  assert.equal(requests,1,'the queued second passage is never sent after closing');
+  f.sandbox.fetch=async()=>({ok:true,json:async()=>({translations:[{index:0,text:'Otra enseñanza.'}]})});
+  const next=vm.runInContext("citationText(document.createElement('div'),{id:'p',text:'Three.'},new AbortController().signal)",f.sandbox);
+  await next.ready;
+  assert.equal(next.quote.textContent,'Otra enseñanza.');
 });
