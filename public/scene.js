@@ -29,6 +29,7 @@ scene.append(leaves);
 function updateTime(){scene.dataset.phase=previewPhase==='auto'?scenePhase():previewPhase;scene.title=symbols[scene.dataset.phase]+(previewPhase==='auto'?' Local clock schedule.':' Debug preview.')+' Click to pause motion.';updatePause();}
 document.getElementById('scene-preview').addEventListener('change',event=>{
   previewPhase=['sunrise','morning','midday','sunset','night'].includes(event.target.value)?event.target.value:'auto';
+  scene.dataset.preview=previewPhase==='auto'?'false':'true';
   updateTime();
 });
 export function setAvatarState(state) { scene.dataset.state = state; }

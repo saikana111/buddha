@@ -65,3 +65,41 @@ body{height:var(--viewport-height,100dvh)}
 #study-plans{font:13px/1.6 system-ui;color:#c3baa5}#study-plans section{border:1px solid #8c7c5c;padding:12px;margin:12px 0}#study-plans h4{color:#e9d6ad;margin:0 0 8px}#study-plans button{background:#253033;color:#eadfc9;border:1px solid #927a5077;padding:8px 12px;margin-right:8px;cursor:pointer}#study-plans ol{padding-left:24px}
 .meditation-toggle{position:fixed;top:max(8px,env(safe-area-inset-top));right:52px;z-index:10;border:1px solid #baa57466;border-radius:50%;background:#142024bb;color:#e4cfa3;width:32px;height:32px;cursor:pointer}#meditation-form{display:grid;gap:14px;padding:0;border:0;background:none}#meditation-form label{display:grid;gap:5px;font:14px/1.5 system-ui}#meditation-form input,#meditation-form select{background:#0b1418;color:#eee2cb;border:1px solid #8c7c5c;padding:9px;font:16px system-ui}#meditation-form input[type=checkbox]{justify-self:start}#meditation-dialog button:not(.modal-close){background:#253033;color:#eadfc9;border:1px solid #927a5077;padding:9px 14px;cursor:pointer;margin:4px 4px 4px 0}#meditation-clock{font:28px/1.5 monospace;color:#d8c594;font-variant-numeric:tabular-nums}#meditation-controls{display:flex;gap:22px}#med-status,#med-progress{font:13px/1.6 system-ui;color:#c3baa5}.scene[data-state=meditating] .scene-halo{opacity:.45}.scene[data-state=meditating] .scene-leaves{opacity:.35}
 .scene-debug{margin:18px 0;font:13px/1.6 system-ui;color:#c3baa5}.scene-debug label{display:block;margin-top:10px}.scene-debug select{width:100%;padding:9px;background:#0b1418;color:#eee2cb;border:1px solid #8c7c5c;font:16px system-ui}.scene-debug p{margin:6px 0}
+/* Distinct retro palette swaps, rather than small brightness differences. */
+.scene{--phase-transition:3s;--landscape-filter:brightness(1) saturate(1.1)}
+.scene[data-preview=true]{--phase-transition:0s}
+.scene .scene-background{filter:var(--landscape-filter);transition:filter var(--phase-transition)}
+.scene .sky-light{mix-blend-mode:normal;opacity:1;transition:none}
+.scene .celestial{transition:top var(--phase-transition),left var(--phase-transition),background var(--phase-transition);opacity:1;box-shadow:none}
+.scene[data-phase=sunrise]{--landscape-filter:sepia(.42) saturate(1.2) brightness(.78) contrast(1.08)}
+.scene[data-phase=sunrise] .sky-light{background:linear-gradient(180deg,#58476dbb 0%,#f38e8399 29%,#ffc87866 49%,transparent 70%)}
+.scene[data-phase=sunrise] .celestial{left:16%;top:39%;width:7%;background:#ffdc9a}
+.scene[data-phase=sunrise] .scene-avatar{filter:sepia(.22) saturate(1.15) brightness(.9) drop-shadow(9px 5px 0 #34223b55)}
+.scene[data-phase=sunrise] .cloud{background:#ffc6a2;opacity:.32}
+.scene[data-phase=morning]{--landscape-filter:brightness(1.04) saturate(1.2) contrast(1.02)}
+.scene[data-phase=morning] .sky-light{background:linear-gradient(180deg,#70dce355,transparent 52%)}
+.scene[data-phase=morning] .celestial{left:24%;top:22%;width:4.5%;background:#fff3be}
+.scene[data-phase=morning] .scene-avatar{filter:brightness(1.06) saturate(1.1) drop-shadow(5px 5px 0 #12373555)}
+.scene[data-phase=morning] .cloud{background:#e5fff5;opacity:.25}
+.scene[data-phase=midday]{--landscape-filter:brightness(1.15) saturate(1.35) contrast(1.12)}
+.scene[data-phase=midday] .sky-light{background:linear-gradient(180deg,#064bd533,transparent 45%)}
+.scene[data-phase=midday] .celestial{left:34%;top:5%;width:3.5%;background:#fffde6}
+.scene[data-phase=midday] .scene-avatar{filter:brightness(1.12) saturate(1.08) contrast(1.05) drop-shadow(0 7px 0 #102c2c66)}
+.scene[data-phase=midday] .cloud{background:#fff;opacity:.4;height:4%}
+.scene[data-phase=sunset]{--landscape-filter:sepia(.72) saturate(1.65) brightness(.62) contrast(1.18)}
+.scene[data-phase=sunset] .sky-light{background:linear-gradient(180deg,#4b245dcc 0%,#bd456bb3 24%,#ff823399 43%,#ffb24c44 58%,transparent 78%)}
+.scene[data-phase=sunset] .celestial{left:35%;top:39%;width:8%;background:#ffb34f}
+.scene[data-phase=sunset] .scene-avatar{filter:sepia(.42) saturate(1.4) brightness(.78) drop-shadow(-10px 6px 0 #2c143d77)}
+.scene[data-phase=sunset] .cloud{background:#7c365d;opacity:.5}
+.scene[data-phase=sunset] .scene-vignette{opacity:.35;background:linear-gradient(0deg,#22122d88,transparent 60%)}
+.scene[data-phase=night]{--landscape-filter:brightness(.27) saturate(.72) contrast(1.15)}
+.scene[data-phase=night] .sky-light{background:linear-gradient(180deg,#081327e6 0%,#17295899 38%,#163b682b 70%,transparent)}
+.scene[data-phase=night] .celestial{left:20%;top:15%;width:5%;background:#e5f0ff}
+.scene[data-phase=night] .celestial::after{content:'';position:absolute;width:88%;height:88%;left:30%;top:-12%;border-radius:50%;background:#101e3b}
+.scene[data-phase=night] .scene-avatar{filter:brightness(.63) saturate(.65) drop-shadow(0 4px 0 #060e24)}
+.scene[data-phase=night] .cloud{background:#8396c2;opacity:.09}
+.scene[data-phase=night] .scene-halo{border-color:#b6d1ef99}
+.scene[data-phase=night] .scene-motes i{background:#bcf7b7;width:3px;height:3px}
+.scene[data-phase=night] .stars{inset:0 35% 48% 0;width:auto;height:auto;box-shadow:none;background:radial-gradient(circle at 8% 19%,#dceaff 0 1px,transparent 2px),radial-gradient(circle at 21% 7%,#fff5cb 0 1px,transparent 2px),radial-gradient(circle at 36% 31%,#dceaff 0 1.5px,transparent 2px),radial-gradient(circle at 53% 15%,#dceaff 0 1px,transparent 2px),radial-gradient(circle at 67% 38%,#fff5cb 0 1px,transparent 2px),radial-gradient(circle at 80% 9%,#dceaff 0 1.5px,transparent 2px),radial-gradient(circle at 12% 63%,#dceaff 0 1px,transparent 2px),radial-gradient(circle at 45% 75%,#dceaff 0 1px,transparent 2px),radial-gradient(circle at 91% 61%,#dceaff 0 1px,transparent 2px)}
+.scene[data-phase=sunrise] .scene-atmosphere::after,.scene[data-phase=morning] .scene-atmosphere::after{content:'';position:absolute;left:0;right:0;top:60%;height:22%;background:linear-gradient(transparent 10%,#e8c4b755 12% 18%,transparent 21% 39%,#f4d4ba44 41% 47%,transparent 50%);pointer-events:none}
+.scene[data-phase=morning] .scene-atmosphere::after{opacity:.35}
