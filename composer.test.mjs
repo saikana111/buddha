@@ -9,7 +9,7 @@ function fixture(){
   const element=id=>{
     if(!elements.has(id))elements.set(id,{
       value:'',style:{},dataset:{},disabled:true,firstElementChild:{textContent:''},
-      addEventListener(){},replaceChildren(){},append(){},focus(){this.focused=true;},
+      addEventListener(){},replaceChildren(...nodes){this.children=nodes;this.firstElementChild=nodes[0]||null;},append(...nodes){this.children=[...(this.children||[]),...nodes];},focus(){this.focused=true;},
       setAttribute(){},showModal(){},close(){}
     });
     return elements.get(id);
@@ -186,4 +186,57 @@ test('waiting narration follows synthesis status and cannot overwrite a finished
   waiting.textContent='Finished';
   await poll();
   assert.equal(waiting.textContent,'Finished');
+});
+
+test('Spanish translates only the visible source page, caches it, and preserves English sources',async()=>{
+  const f=fixture();f.sandbox.currentLanguage=()=> 'es';let requests=0;
+  vm.runInContext("sources=[{id:'p',text:Array.from({length:320},(_,i)=>'word'+i).join(' ')}];pages=dialoguePages([{text:sources[0].text,ids:['p'],quote:true}],150);pageIndex=0;canContinue=true;",f.sandbox);
+  f.sandbox.fetch=async(url,options)=>{
+    requests++;assert.equal(url,'/api/translate-page');
+    const blocks=JSON.parse(options.body).blocks;
+    assert.equal(blocks[0].text.split(' ').length,150);
+    return {ok:true,json:async()=>({translations:[{index:0,text:'Una enseñanza traducida.'}]})};
+  };
+  await vm.runInContext('showDialoguePage()',f.sandbox);
+  assert.equal(requests,1);
+  assert.equal(f.element('question').disabled,false);
+  assert.equal(f.element('reply').children[1].textContent,'Una enseñanza traducida.');
+  assert.match(vm.runInContext('sources[0].text',f.sandbox),/^word0 /);
+  await vm.runInContext('showDialoguePage()',f.sandbox);
+  assert.equal(requests,1,'rereading does not regenerate translation');
+  vm.runInContext('pageIndex++;',f.sandbox);
+  await vm.runInContext('showDialoguePage()',f.sandbox);
+  assert.equal(requests,2,'the next page translates on demand');
+  f.sandbox.currentLanguage=()=> 'en';
+  await vm.runInContext('showDialoguePage()',f.sandbox);
+  assert.match(f.element('reply').children[0].textContent,/^word150 /);
+  assert.equal(requests,2);
+});
+
+test('canceling live translation restores the readable original and composer',async()=>{
+  const f=fixture();f.sandbox.currentLanguage=()=> 'es';
+  vm.runInContext("pages=[[{text:'The English source.',ids:['p'],quote:true}]];pageIndex=0;",f.sandbox);
+  f.sandbox.fetch=(_url,{signal})=>new Promise((resolve,reject)=>{
+    signal.addEventListener('abort',()=>reject(signal.reason),{once:true});
+  });
+  const pending=vm.runInContext('showDialoguePage()',f.sandbox);
+  assert.equal(f.element('question').disabled,true);
+  f.element('cancel-reply').onclick();
+  await pending;
+  assert.equal(f.element('question').disabled,false);
+  assert.equal(f.element('retry-translation').hidden,false);
+  assert.equal(f.element('reply').children[1].textContent,'The English source.');
+});
+
+test('a delayed Spanish translation cannot overwrite a later English view',async()=>{
+  const f=fixture();f.sandbox.currentLanguage=()=> 'es';let resolve;
+  vm.runInContext("pages=[[{text:'The English source.',ids:['p'],quote:true}]];pageIndex=0;",f.sandbox);
+  f.sandbox.fetch=()=>new Promise(r=>{resolve=r;});
+  const pending=vm.runInContext('showDialoguePage()',f.sandbox);
+  f.sandbox.currentLanguage=()=> 'en';
+  await vm.runInContext('showDialoguePage()',f.sandbox);
+  resolve({ok:true,json:async()=>({translations:[{index:0,text:'La fuente.'}]})});
+  await pending;
+  assert.equal(f.element('reply').children[0].textContent,'The English source.');
+  assert.equal(f.element('question').disabled,false);
 });

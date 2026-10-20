@@ -6,6 +6,8 @@ const $=id=>document.getElementById(id);
 let history=[],sources=[],verse=0,typing=null,finish=null,configured=false,requestInFlight=false,pages=[],pageIndex=0,canContinue=false;
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let arriving=false,arrivalGeneration=0,hasMet=false,replyController=null;
+let translating=false,pageController=null,pageGeneration=0;
+const translatedPages=new Map();
 function waitingWords(stage){
   if(stage==='reflecting')return currentLanguage()==='es'
     ?'El hombre sentado te mira, tomándose un momento para considerar tu pregunta.'
@@ -109,23 +111,72 @@ function appendContext(box,passage){
   }catch(error){loaded=false;const p=document.createElement('p');p.textContent=error.message;details.append(p);}
  });
 }
-function unlock(){if(!configured||isMeditating()||arriving)return;setAvatarState('idle');$('send').disabled=false;$('question').disabled=false;$('reveal').hidden=true;const morePages=pageIndex+1<pages.length;$('next').hidden=!verse||morePages;$('continue-dialogue').hidden=!canContinue||(!!verse&&!morePages);$('question').focus();}
+function unlock(){if(!configured||isMeditating()||arriving||translating)return;setAvatarState('idle');$('send').disabled=false;$('question').disabled=false;$('reveal').hidden=true;const morePages=pageIndex+1<pages.length;$('next').hidden=!verse||morePages;$('continue-dialogue').hidden=!canContinue||(!!verse&&!morePages);$('question').focus();}
 async function restoreAfterMeditation(){
   // Restoring an empty history does not call render(), and profile fetches can fail.
   // Neither case may leave the composer locked after a completed sitting.
   try{await loadProfile(true);}finally{unlock();}
 }
 function render(result){sources=result.passages||[];const blocks=(result.paragraphs||[]).map(p=>({...p}));
-  if(!blocks.length&&sources.length){for(const src of sources){const translated=result.translatedExcerpts?.find(p=>p.id===src.id);blocks.push({text:translated?.text||src.text,ids:[src.id],quote:true,note:currentLanguage()==='es'?t(translated?'Machine-assisted translation; original in the source.':'Source excerpt (English).'):''});}}
+  if(!blocks.length&&sources.length){for(const src of sources)blocks.push({text:src.text,ids:[src.id],quote:true});}
   canContinue=blocks.length>0;
   if(!blocks.length)blocks.push({text:result.notice||t("Could you tell me a little more?"),ids:[]});
   if(result.learningQuestion)blocks.push({text:result.learningQuestion,ids:[]});
   history.push({role:'assistant',content:blocks.map(b=>b.text).join('\n')});history=history.slice(-6);
-  pages=dialoguePages(blocks);pageIndex=0;showDialoguePage();
+  pages=dialoguePages(blocks,currentLanguage()==='es'?150:200);pageIndex=0;showDialoguePage();
 }
-function showDialoguePage(){
+async function showDialoguePage(){
+  const generation=++pageGeneration;
+  pageController?.abort();pageController=null;translating=false;
+  $('retry-translation').hidden=true;
+  const original=pages[pageIndex]||[];
+  const quoted=original.filter(b=>b.quote&&!b.machineTranslated);
+  if(currentLanguage()!=='es'||!quoted.length){
+    paintDialoguePage(original.map(b=>b.quote&&!b.machineTranslated?{...b,note:currentLanguage()==='es'?b.note:''}:b));return;
+  }
+  const blocks=quoted.map(b=>({text:b.text,ids:b.ids}));
+  const key=JSON.stringify(blocks);
+  let translated=translatedPages.get(key),failed=false;
+  if(!translated){
+    translating=true;pageController=new AbortController();
+    const controller=pageController;
+    clearInterval(typing);typing=null;finish=null;
+    $('send').disabled=true;$('question').disabled=true;
+    for(const id of ['reveal','next','continue-dialogue'])$(id).hidden=true;
+    $('cancel-reply').hidden=false;$('cancel-reply').textContent='Cancelar';
+    const waiting=document.createElement('p');waiting.className='waiting';
+    waiting.textContent='Traduciendo este pasaje al español…';$('reply').replaceChildren(waiting);
+    try{
+      const r=await fetch('/api/translate-page',{method:'POST',
+        signal:AbortSignal.any([controller.signal,AbortSignal.timeout(125000)]),
+        headers:{'Content-Type':'application/json'},body:JSON.stringify({blocks})});
+      const result=await r.json();if(!r.ok)throw Error(result.error);
+      if(!Array.isArray(result.translations)||result.translations.length!==quoted.length||
+        result.translations.some((p,i)=>p.index!==i||typeof p.text!=='string'||!p.text.trim()))throw Error('Incomplete translation');
+      translated=result.translations;translatedPages.set(key,translated);
+    }catch{failed=true;}
+    finally{
+      if(generation===pageGeneration){
+        translating=false;pageController=null;
+        if(!requestInFlight)$('cancel-reply').hidden=true;
+      }
+    }
+  }
+  if(generation!==pageGeneration||isMeditating())return;
+  let index=0;
+  const display=original.map(block=>{
+    if(!block.quote||block.machineTranslated)return block;
+    const translation=translated?.[index++];
+    return {...block,text:translation?.text||block.text,
+      note:translation?'Traducción automática al español; original inglés en la fuente.':'No se pudo traducir. Mostrando el original en inglés.'};
+  });
+  $('retry-translation').hidden=!failed;
+  paintDialoguePage(display);
+}
+function paintDialoguePage(displayBlocks){
+  clearInterval(typing);typing=null;finish=null;
   const nodes=[];
-  for(const block of pages[pageIndex]||[]){
+  for(const block of displayBlocks){
     if(block.note){const note=document.createElement('small');note.textContent=block.note;nodes.push(note);}
     const p=document.createElement(block.quote?'blockquote':'p');p.textContent=block.text;
     for(const id of block.ids||[])p.append(sourceButton(id));nodes.push(p);
@@ -136,17 +187,18 @@ function showDialoguePage(){
   if(reduced){all();return;}
   setAvatarState('speaking');$('reveal').hidden=false;const plain=document.createElement('p');reply.append(plain);let pos=0;typing=setInterval(()=>{pos+=5;plain.textContent=spoken.slice(0,pos);if(pos>=spoken.length)all();},15);
 }
+$('retry-translation').onclick=()=>showDialoguePage();
 $('reveal').onclick=()=>finish?.();
 $('continue-dialogue').onclick=()=>{
-  if(isMeditating()||requestInFlight||typing)return;
+  if(isMeditating()||requestInFlight||typing||translating)return;
   if(pageIndex+1<pages.length){pageIndex++;showDialoguePage();}
   else return ask(currentLanguage()==='es'?'Continúa, por favor.':'Please continue.');
 };
-async function ask(question,planId){if(isMeditating()||arriving||requestInFlight)return;if(!configured){showWelcome();return;}requestInFlight=true;replyController=new AbortController();$('cancel-reply').hidden=false;$('cancel-reply').textContent=currentLanguage()==='es'?'Cancelar':'Cancel';setAvatarState('listening');verse=0;const m=question.match(/(?:dhammapada|dhp)\s*(?:(?:verse|verso)\s*)?(\d{1,3})\b/i);if(m&&!/explain|mean|interpret|story|stories|background|commentary|explica|significa|historia|comentario/i.test(question))verse=Number(m[1]);if(/^\s*(read|recite|start|begin|teach me)\s+(the\s+)?dhammapada[.!?]?\s*$/i.test(question)){question='Dhammapada verse 1';verse=1;}
+async function ask(question,planId){if(isMeditating()||arriving||requestInFlight||translating)return;if(!configured){showWelcome();return;}requestInFlight=true;replyController=new AbortController();$('cancel-reply').hidden=false;$('cancel-reply').textContent=currentLanguage()==='es'?'Cancelar':'Cancel';setAvatarState('listening');verse=0;const m=question.match(/(?:dhammapada|dhp)\s*(?:(?:verse|verso)\s*)?(\d{1,3})\b/i);if(m&&!/explain|mean|interpret|story|stories|background|commentary|explica|significa|historia|comentario/i.test(question))verse=Number(m[1]);if(/^\s*(read|recite|start|begin|teach me)\s+(the\s+)?dhammapada[.!?]?\s*$/i.test(question)){question='Dhammapada verse 1';verse=1;}
   $('send').disabled=true;$('question').disabled=true;$('next').hidden=true;$('continue-dialogue').hidden=true;const waiting=document.createElement('p');waiting.textContent=waitingWords('listening');waiting.className='waiting';$('reply').replaceChildren(waiting);const waitingPoll=watchReply(waiting,replyController);
-  try{const r=await fetch('/api/ask',{method:'POST',signal:AbortSignal.any([replyController.signal,AbortSignal.timeout(245000)]),headers:{'Content-Type':'application/json'},body:JSON.stringify({question,planId,history,localDate:localDay(),previousIds:sources.map(p=>p.id)})});const result=await r.json();if(!r.ok)throw Error(result.error);history.push({role:'user',content:question});render(result);}catch(e){verse=0;const p=document.createElement('p');p.textContent=['AbortError','TimeoutError'].includes(e.name)?(currentLanguage()==='es'?'La respuesta se detuvo. Puedes volver a intentarlo.':'The reply stopped. You can try again.'):t(e.message);$('reply').replaceChildren(p);if(!$('question').value)$('question').value=question;}finally{clearInterval(waitingPoll);requestInFlight=false;replyController=null;$('cancel-reply').hidden=true;if(!typing)unlock();}
+  try{const r=await fetch('/api/ask',{method:'POST',signal:AbortSignal.any([replyController.signal,AbortSignal.timeout(245000)]),headers:{'Content-Type':'application/json'},body:JSON.stringify({question,planId,history,localDate:localDay(),previousIds:sources.map(p=>p.id)})});const result=await r.json();if(!r.ok)throw Error(result.error);history.push({role:'user',content:question});render(result);}catch(e){verse=0;const p=document.createElement('p');p.textContent=['AbortError','TimeoutError'].includes(e.name)?(currentLanguage()==='es'?'La respuesta se detuvo. Puedes volver a intentarlo.':'The reply stopped. You can try again.'):t(e.message);$('reply').replaceChildren(p);if(!$('question').value)$('question').value=question;}finally{clearInterval(waitingPoll);requestInFlight=false;replyController=null;if(!translating)$('cancel-reply').hidden=true;if(!typing)unlock();}
 }
-$('cancel-reply').onclick=()=>replyController?.abort();
+$('cancel-reply').onclick=()=>(pageController||replyController)?.abort();
 $('form').onsubmit=e=>{e.preventDefault();const q=$('question').value.trim();if(!q)return;$('question').value='';$('question').style.height='auto';ask(q);};
 $('question').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();if(!$('send').disabled)$('form').requestSubmit();}};
 $('question').oninput=()=>{$('question').style.height='auto';$('question').style.height=Math.min($('question').scrollHeight,130)+'px';};
@@ -171,7 +223,7 @@ async function loadProfile(restore=false){
   for(const item of memory.learning){const p=document.createElement('p');p.textContent=`${t(item.topic)}: ${item.discussions} ${t('discussions')}. ${item.needsReview?t('You mentioned difficulty; worth revisiting.'):t('Understanding not yet assessed.')}`;if(item.evidence){const small=document.createElement('small');small.textContent=` ${t('You said:')} ${item.evidence}`;p.append(small);}$('learning-notes').append(p);}
   $('past-chats').textContent=memory.history.map(m=>`${m.role==='user'?t('You'):t('Reply')}: ${m.content}`).join('\n\n');
   if(restore){history=memory.history;if(memory.lastResponse){render(memory.lastResponse);finish?.();history=memory.history;}else if(player.name){$('reply').firstElementChild.textContent=currentLanguage()==='es'?`Hola, ${player.name}. ${t('What is on your mind?')}`:`Welcome, ${player.name}. What is on your mind?`;}}
-  if(configured)await initMeditationUI({isBusy:()=>arriving||requestInFlight||!!typing,onEnd:restoreAfterMeditation});
+  if(configured)await initMeditationUI({isBusy:()=>arriving||translating||requestInFlight||!!typing,onEnd:restoreAfterMeditation});
   return memory;
 }
 function showWelcome(){
@@ -216,8 +268,8 @@ $('welcome-form').onsubmit=async e=>{
 };
 $('open-profile').onclick=async()=>{$('profile-dialog').showModal();try{await loadProfile();}catch(e){$('profile-status').textContent=t(e.message);}};
 $('close-profile').onclick=()=>$('profile-dialog').close();
-$('profile-form').onsubmit=async event=>{event.preventDefault();try{const r=await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('player-name').value,meditationMinutes:Number($('player-minutes').value),focus:$('player-focus').value,notes:$('player-notes').value,language:$('player-language').value})});if(!r.ok)throw Error((await r.json()).error);setLanguage($('player-language').value);await refreshMeditation();$('profile-status').textContent=t("Saved.");}catch(e){$('profile-status').textContent=t(e.message);}};
-$('forget-profile').onclick=async()=>{if(!confirm(t("Delete this player’s saved profile and all their conversations?")))return;try{const r=await fetch('/api/profile',{method:'DELETE'});if(!r.ok)throw Error(t("Could not forget this profile."));arrivalGeneration++;arriving=false;arrivalState('waiting');resetMeditationUI();history=[];sources=[];verse=0;clearInterval(typing);finish=null;$('reply').replaceChildren();const p=document.createElement('p');p.textContent=t("What is on your mind?");$('reply').append(p);await loadProfile();$('profile-dialog').close();showWelcome();}catch(e){$('profile-status').textContent=t(e.message);}};
+$('profile-form').onsubmit=async event=>{event.preventDefault();try{const r=await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:$('player-name').value,meditationMinutes:Number($('player-minutes').value),focus:$('player-focus').value,notes:$('player-notes').value,language:$('player-language').value})});if(!r.ok)throw Error((await r.json()).error);setLanguage($('player-language').value);if(pages.length&&!isMeditating()&&!requestInFlight)void showDialoguePage();await refreshMeditation();$('profile-status').textContent=t("Saved.");}catch(e){$('profile-status').textContent=t(e.message);}};
+$('forget-profile').onclick=async()=>{if(!confirm(t("Delete this player’s saved profile and all their conversations?")))return;try{const r=await fetch('/api/profile',{method:'DELETE'});if(!r.ok)throw Error(t("Could not forget this profile."));pageGeneration++;pageController?.abort();pageController=null;translating=false;arrivalGeneration++;arriving=false;arrivalState('waiting');resetMeditationUI();history=[];sources=[];verse=0;clearInterval(typing);finish=null;$('reply').replaceChildren();const p=document.createElement('p');p.textContent=t("What is on your mind?");$('reply').append(p);await loadProfile();$('profile-dialog').close();showWelcome();}catch(e){$('profile-status').textContent=t(e.message);}};
 // Establish the cookie before allowing the first conversation to avoid racing identities.
 $('send').disabled=true;$('question').disabled=true;
 loadProfile(true).then(async memory=>{history=memory.history;if(!configured)showWelcome();else await enterGrove();}).catch(e=>{showWelcome();$('welcome-status').textContent=t(e.message);});

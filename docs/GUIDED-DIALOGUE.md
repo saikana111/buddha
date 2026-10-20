@@ -138,10 +138,22 @@ the edition, speaker metadata, genre, and surrounding context for checking.
 An excerpt is not necessarily a complete story, and narrator/disciples' words
 are not silently rewritten as the Buddha's own speech.
 
-Spanish profiles see the exact installed English source with a language label
-and can ask questions in Spanish. These source-first quotes are never
-silently replaced by machine translations. Saved responses retain the quoted
-text and source IDs; model-generated explanations remain distinct from quotes.
+Spanish profiles receive an on-demand English-to-Spanish translation of only
+the displayed source page. The UI labels it as automatic translation; citation
+buttons continue to open the untouched English edition. New generated
+explanations already use the profile language. Saved responses retain the
+English source text and IDs.
+
+`POST /api/translate-page` accepts only bounded excerpts that match eligible
+stored sources. The local model translates each segment without paraphrasing
+or adding commentary. A separate SQLite cache keys results by source content,
+revision, displayed excerpt, translation instructions version, and model.
+No corpus files are translated or replaced. Browser pages use a smaller English
+window for Spanish to leave room for expansion. Further pages translate only
+when requested, and rereading uses cached results. Settings changes redraw the
+current page in the selected language. Translation can be canceled; on failure
+the English text remains available with a retry button. Translation completeness
+is structurally checked, but linguistic accuracy is not guaranteed by these checks.
 
 Pending requests have a Cancel control and a 245-second browser timeout.
 The server imposes a 240-second total request deadline and cancels model work
@@ -169,10 +181,10 @@ Commands such as **Read MN 61**, **Quote SN 12.52**, or **Recita MN 61** take a
 separate reading route. Two ordered source chunks are returned at a time; Continue
 first finishes their browser pages and then retrieves the next source chunks.
 The reading cursor belongs to the player's saved response. No model is used to
-rewrite these readings or translate them automatically. This initial route uses
+rewrite stored readings. Spanish profiles use the same labeled live page
+translation described above. This initial route uses
 the installed Sujato English translation, identified in the source popup; it is
-not the historical Buddha's recoverable exact English speech. Spanish users
-see the existing English-source label. The text retains the import's normalized
+not the historical Buddha's recoverable exact English speech. The text retains the import's normalized
 formatting; paging does not reconstruct lost verse typography.
 
 Supported explicit reference prefixes are DN, MN, SN, AN, Ud, Iti, Snp, Thag and
