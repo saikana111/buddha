@@ -3,7 +3,7 @@ import {initMeditationUI,isMeditating,resetMeditationUI,localDay,armMeditationAu
 import { setAvatarState } from './scene.js';
 import { dialoguePages } from './dialogue-pages.js';
 const $=id=>document.getElementById(id);
-let history=[],sources=[],verse=0,typing=null,finish=null,configured=false,requestInFlight=false,pages=[],pageIndex=0,canContinue=false;
+let history=[],sources=[],verse=0,typing=null,finish=null,configured=false,requestInFlight=false,pages=[],pageIndex=0,canContinue=false,readingKey='';
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let arriving=false,arrivalGeneration=0,hasMet=false,replyController=null;
 let translating=false,pageController=null,pageGeneration=0;
@@ -58,7 +58,7 @@ async function enterGrove(){
   if(isMeditating()){arrivalState('ready');return;}
   arriving=true;clearInterval(typing);typing=null;finish=null;
   $('send').disabled=true;$('question').disabled=true;
-  for(const id of ['next','continue-dialogue','reveal'])$(id).hidden=true;
+  for(const id of ['back-dialogue','next','continue-dialogue','reveal'])$(id).hidden=true;
   arrivalState('waiting');
   const narration=document.createElement('p');
   narration.textContent=currentLanguage()==='es'
@@ -117,7 +117,7 @@ function citationText(container,passage,signal){
   controls.className='dialogue-controls';
   const previous=document.createElement('button'),next=document.createElement('button'),retry=document.createElement('button'),position=document.createElement('small');
   for(const b of [previous,next,retry])b.type='button';
-  previous.textContent='← Anterior';next.textContent='Siguiente →';retry.textContent='Reintentar traducción';retry.hidden=true;
+  previous.className='back-page';previous.textContent='← Anterior';next.textContent='Siguiente →';retry.textContent='Reintentar traducción';retry.hidden=true;
   controls.append(previous,position,next,retry);
   const original=document.createElement('details'),summary=document.createElement('summary'),originalText=document.createElement('blockquote');
   summary.textContent='Ver original en inglés';originalText.textContent=passage.text;original.append(summary,originalText);
@@ -186,19 +186,23 @@ function appendContext(box,passage,signal){
   }catch(error){loaded=false;const p=document.createElement('p');p.textContent=error.message;details.append(p);}
  });
 }
-function unlock(){if(!configured||isMeditating()||arriving||translating)return;setAvatarState('idle');$('send').disabled=false;$('question').disabled=false;$('reveal').hidden=true;const morePages=pageIndex+1<pages.length;$('next').hidden=!verse||morePages;$('continue-dialogue').hidden=!canContinue||(!!verse&&!morePages);$('question').focus();}
+function unlock(){if(!configured||isMeditating()||arriving||translating)return;setAvatarState('idle');$('send').disabled=false;$('question').disabled=false;$('reveal').hidden=true;$('back-dialogue').hidden=pageIndex===0;const morePages=pageIndex+1<pages.length;$('next').hidden=!verse||morePages;$('continue-dialogue').hidden=!canContinue||(!!verse&&!morePages);$('question').focus();}
 async function restoreAfterMeditation(){
   // Restoring an empty history does not call render(), and profile fetches can fail.
   // Neither case may leave the composer locked after a completed sitting.
   try{await loadProfile(true);}finally{unlock();}
 }
-function render(result){sources=result.passages||[];const blocks=(result.paragraphs||[]).map(p=>({...p}));
-  if(!blocks.length&&sources.length){for(const src of sources)blocks.push({text:src.text,ids:[src.id],quote:true});}
+function render(result,append=false){
+  const key=result.reading?.uid?`reading:${result.reading.uid}`:result.sourceThread?.topic?`topic:${result.sourceThread.topic}`:'';
+  const keepPages=!!(append&&key&&key===readingKey&&(result.sourceFirst||result.reading)&&pages.length);
+  readingKey=key;
+  sources=keepPages?[...new Map([...sources,...(result.passages||[])].map(p=>[p.id,p])).values()]:result.passages||[];const blocks=(result.paragraphs||[]).map(p=>({...p}));
+  if(!blocks.length&&result.passages?.length){for(const src of result.passages)blocks.push({text:src.text,ids:[src.id],quote:true});}
   canContinue=blocks.length>0;
   if(!blocks.length)blocks.push({text:result.notice||t("Could you tell me a little more?"),ids:[]});
   if(result.learningQuestion)blocks.push({text:result.learningQuestion,ids:[]});
   history.push({role:'assistant',content:blocks.map(b=>b.text).join('\n')});history=history.slice(-6);
-  pages=dialoguePages(blocks,currentLanguage()==='es'?150:200);pageIndex=0;showDialoguePage();
+  const nextPages=dialoguePages(blocks,currentLanguage()==='es'?150:200);pageIndex=keepPages?pages.length:0;pages=keepPages?[...pages,...nextPages]:nextPages;showDialoguePage();
 }
 async function showDialoguePage(){
   const generation=++pageGeneration;
@@ -217,7 +221,7 @@ async function showDialoguePage(){
     const controller=pageController;
     clearInterval(typing);typing=null;finish=null;
     $('send').disabled=true;$('question').disabled=true;
-    for(const id of ['reveal','next','continue-dialogue'])$(id).hidden=true;
+    for(const id of ['back-dialogue','reveal','next','continue-dialogue'])$(id).hidden=true;
     $('cancel-reply').hidden=false;$('cancel-reply').textContent='Cancelar';
     const waiting=document.createElement('p');waiting.className='waiting';
     waiting.textContent='Traduciendo este pasaje al español…';$('reply').replaceChildren(waiting);
@@ -251,21 +255,25 @@ function paintDialoguePage(displayBlocks){
     for(const id of block.ids||[])p.append(sourceButton(id));nodes.push(p);
   }
   const spoken=nodes.map(n=>n.textContent).join('\n');
-  $('send').disabled=true;$('question').disabled=true;$('continue-dialogue').hidden=true;
+  $('send').disabled=true;$('question').disabled=true;$('back-dialogue').hidden=true;$('continue-dialogue').hidden=true;
   const reply=$('reply');reply.replaceChildren();if(reply.parentElement)reply.parentElement.scrollTop=0;const all=()=>{clearInterval(typing);typing=null;reply.replaceChildren(...nodes);finish=null;unlock();};finish=all;
   if(reduced){all();return;}
   setAvatarState('speaking');$('reveal').hidden=false;const plain=document.createElement('p');reply.append(plain);let pos=0;typing=setInterval(()=>{pos+=5;plain.textContent=spoken.slice(0,pos);if(pos>=spoken.length)all();},15);
 }
 $('retry-translation').onclick=()=>showDialoguePage();
 $('reveal').onclick=()=>finish?.();
+$('back-dialogue').onclick=()=>{
+  if(isMeditating()||requestInFlight||typing||translating||arriving||pageIndex===0)return;
+  pageIndex--;return showDialoguePage();
+};
 $('continue-dialogue').onclick=()=>{
   if(isMeditating()||requestInFlight||typing||translating)return;
   if(pageIndex+1<pages.length){pageIndex++;showDialoguePage();}
-  else return ask(currentLanguage()==='es'?'Continúa, por favor.':'Please continue.');
+  else return ask(currentLanguage()==='es'?'Continúa, por favor.':'Please continue.',undefined,true);
 };
-async function ask(question,planId){if(isMeditating()||arriving||requestInFlight||translating)return;if(!configured){showWelcome();return;}requestInFlight=true;replyController=new AbortController();$('cancel-reply').hidden=false;$('cancel-reply').textContent=currentLanguage()==='es'?'Cancelar':'Cancel';setAvatarState('listening');verse=0;const m=question.match(/(?:dhammapada|dhp)\s*(?:(?:verse|verso)\s*)?(\d{1,3})\b/i);if(m&&!/explain|mean|interpret|story|stories|background|commentary|explica|significa|historia|comentario/i.test(question))verse=Number(m[1]);if(/^\s*(read|recite|start|begin|teach me)\s+(the\s+)?dhammapada[.!?]?\s*$/i.test(question)){question='Dhammapada verse 1';verse=1;}
-  $('send').disabled=true;$('question').disabled=true;$('next').hidden=true;$('continue-dialogue').hidden=true;const waiting=document.createElement('p');waiting.textContent=waitingWords('listening');waiting.className='waiting';$('reply').replaceChildren(waiting);const waitingPoll=watchReply(waiting,replyController);
-  try{const r=await fetch('/api/ask',{method:'POST',signal:AbortSignal.any([replyController.signal,AbortSignal.timeout(245000)]),headers:{'Content-Type':'application/json'},body:JSON.stringify({question,planId,history,localDate:localDay(),previousIds:sources.map(p=>p.id)})});const result=await r.json();if(!r.ok)throw Error(result.error);history.push({role:'user',content:question});render(result);}catch(e){verse=0;const p=document.createElement('p');p.textContent=['AbortError','TimeoutError'].includes(e.name)?(currentLanguage()==='es'?'La respuesta se detuvo. Puedes volver a intentarlo.':'The reply stopped. You can try again.'):t(e.message);$('reply').replaceChildren(p);if(!$('question').value)$('question').value=question;}finally{clearInterval(waitingPoll);requestInFlight=false;replyController=null;if(!translating)$('cancel-reply').hidden=true;if(!typing)unlock();}
+async function ask(question,planId,append=false){if(isMeditating()||arriving||requestInFlight||translating)return;if(!configured){showWelcome();return;}requestInFlight=true;replyController=new AbortController();$('cancel-reply').hidden=false;$('cancel-reply').textContent=currentLanguage()==='es'?'Cancelar':'Cancel';setAvatarState('listening');verse=0;const m=question.match(/(?:dhammapada|dhp)\s*(?:(?:verse|verso)\s*)?(\d{1,3})\b/i);if(m&&!/explain|mean|interpret|story|stories|background|commentary|explica|significa|historia|comentario/i.test(question))verse=Number(m[1]);if(/^\s*(read|recite|start|begin|teach me)\s+(the\s+)?dhammapada[.!?]?\s*$/i.test(question)){question='Dhammapada verse 1';verse=1;}
+  $('send').disabled=true;$('question').disabled=true;$('back-dialogue').hidden=true;$('next').hidden=true;$('continue-dialogue').hidden=true;const waiting=document.createElement('p');waiting.textContent=waitingWords('listening');waiting.className='waiting';$('reply').replaceChildren(waiting);const waitingPoll=watchReply(waiting,replyController);
+  try{const r=await fetch('/api/ask',{method:'POST',signal:AbortSignal.any([replyController.signal,AbortSignal.timeout(245000)]),headers:{'Content-Type':'application/json'},body:JSON.stringify({question,planId,history,localDate:localDay(),previousIds:sources.map(p=>p.id)})});const result=await r.json();if(!r.ok)throw Error(result.error);history.push({role:'user',content:question});render(result,append);}catch(e){verse=0;const p=document.createElement('p');p.textContent=['AbortError','TimeoutError'].includes(e.name)?(currentLanguage()==='es'?'La respuesta se detuvo. Puedes volver a intentarlo.':'The reply stopped. You can try again.'):t(e.message);$('reply').replaceChildren(p);if(!$('question').value)$('question').value=question;}finally{clearInterval(waitingPoll);requestInFlight=false;replyController=null;if(!translating)$('cancel-reply').hidden=true;if(!typing)unlock();}
 }
 $('cancel-reply').onclick=()=>(pageController||replyController)?.abort();
 $('form').onsubmit=e=>{e.preventDefault();const q=$('question').value.trim();if(!q)return;$('question').value='';$('question').style.height='auto';ask(q);};

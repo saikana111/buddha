@@ -287,3 +287,36 @@ test('closing a citation cancels queued translations without poisoning later req
   await next.ready;
   assert.equal(next.quote.textContent,'Otra enseñanza.');
 });
+
+test('Back revisits long replies locally and stops at the first page',async()=>{
+  const f=fixture();let requests=0;
+  f.sandbox.fetch=async()=>{requests++;throw Error('Paging must not call the model');};
+  vm.runInContext("render({paragraphs:[{text:Array.from({length:420},(_,i)=>'word'+i).join(' '),ids:[]}],passages:[]});",f.sandbox);
+  assert.equal(f.element('back-dialogue').hidden,true);
+  f.element('continue-dialogue').onclick();
+  assert.equal(f.element('back-dialogue').hidden,false);
+  await f.element('back-dialogue').onclick();
+  assert.equal(vm.runInContext('pageIndex',f.sandbox),0);
+  assert.match(f.element('reply').children[0].textContent,/^word0 /);
+  assert.equal(f.element('back-dialogue').hidden,true);
+  await f.element('back-dialogue').onclick();
+  assert.equal(vm.runInContext('pageIndex',f.sandbox),0);
+  assert.equal(requests,0);
+});
+
+test('Back preserves earlier source chunks and their citations after Continue fetches more',async()=>{
+  const f=fixture();
+  vm.runInContext("render({sourceFirst:true,sourceThread:{topic:'happiness'},passages:[{id:'first',text:'The first part.'}]});",f.sandbox);
+  f.sandbox.fetch=async()=>({ok:true,json:async()=>({
+    sourceFirst:true,sourceThread:{topic:'happiness'},passages:[{id:'second',text:'The second part.'}]
+  })});
+  await f.element('continue-dialogue').onclick();
+  assert.equal(vm.runInContext('pages.length',f.sandbox),2);
+  assert.equal(vm.runInContext('pageIndex',f.sandbox),1);
+  await f.element('back-dialogue').onclick();
+  assert.equal(f.element('reply').children[0].textContent,'The first part.');
+  assert.equal(vm.runInContext("sources.find(p=>p.id==='first').text",f.sandbox),'The first part.');
+  vm.runInContext("render({paragraphs:[{text:'A new topic.',ids:[]}],passages:[]});",f.sandbox);
+  assert.equal(f.element('back-dialogue').hidden,true);
+  assert.equal(vm.runInContext('pages.length',f.sandbox),1);
+});

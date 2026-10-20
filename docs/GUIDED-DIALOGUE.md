@@ -94,6 +94,11 @@ The browser displays at most 200 words of teaching text per page. Longer output
 and source-only excerpts are split without summarizing, dropping words, or
 losing citations. Continue reveals remaining pages before requesting a new model
 turn. The user may instead type an answer or change the subject at any point
+after reading a page. Back (Atrás) sits on the left and revisits earlier pages
+without another model request; Continue remains on the right. Additional source
+chunks fetched through Continue retain earlier pages and citations in the current
+reading session. A new topic resets this page trail. Navigation is hidden during
+meditation, translation, and pending replies, and becomes available
 after the current typewriter animation completes (Show all skips that animation).
 Dhammapada verse navigation remains separate. Continue is hidden during
 meditation and while a reply is being generated.

@@ -149,3 +149,4 @@ body{height:var(--viewport-height,100dvh)}
 .scene[data-arrival="glimpse"] .scene-avatar{opacity:1;visibility:visible}
 .scene[data-arrival="glimpse"] .scene-halo{opacity:.25}
 .scene[data-arrival="glimpse"] .avatar-shadow{opacity:.35}
+.dialogue-controls .back-page{margin-right:auto}

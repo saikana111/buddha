@@ -29,7 +29,7 @@ export async function armMeditationAudio(){
  catch{$('med-status').textContent=say('Audio could not load. Meditation can continue silently.','No se pudo cargar el audio. La meditación puede continuar en silencio.');}
 }
 function showSession(){
- active=true;$('continue-dialogue').hidden=true;$('send').disabled=true;$('question').disabled=true;$('next').hidden=true;$('reveal').hidden=true;
+ active=true;$('back-dialogue').hidden=true;$('continue-dialogue').hidden=true;$('send').disabled=true;$('question').disabled=true;$('next').hidden=true;$('reveal').hidden=true;
  document.querySelector('.scene-avatar').src='/assets/buddha-meditating.png';setAvatarState('meditating');
  $('reply').replaceChildren();const p=document.createElement('p');p.textContent=say(`It is time to meditate. Let us sit quietly for ${state.session.target/60} minutes.`,`Es hora de meditar. Sentémonos en silencio durante ${state.session.target/60} minutos.`);
  const timer=document.createElement('p');timer.id='meditation-clock';timer.setAttribute('aria-live','off');$('reply').append(p,timer);
