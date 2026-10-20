@@ -103,6 +103,7 @@ body{height:var(--viewport-height,100dvh)}
 .scene[data-phase=night] .stars{inset:0 35% 48% 0;width:auto;height:auto;box-shadow:none;background:radial-gradient(circle at 8% 19%,#dceaff 0 1px,transparent 2px),radial-gradient(circle at 21% 7%,#fff5cb 0 1px,transparent 2px),radial-gradient(circle at 36% 31%,#dceaff 0 1.5px,transparent 2px),radial-gradient(circle at 53% 15%,#dceaff 0 1px,transparent 2px),radial-gradient(circle at 67% 38%,#fff5cb 0 1px,transparent 2px),radial-gradient(circle at 80% 9%,#dceaff 0 1.5px,transparent 2px),radial-gradient(circle at 12% 63%,#dceaff 0 1px,transparent 2px),radial-gradient(circle at 45% 75%,#dceaff 0 1px,transparent 2px),radial-gradient(circle at 91% 61%,#dceaff 0 1px,transparent 2px)}
 .scene[data-phase=sunrise] .scene-atmosphere::after,.scene[data-phase=morning] .scene-atmosphere::after{content:'';position:absolute;left:0;right:0;top:60%;height:22%;background:linear-gradient(transparent 10%,#e8c4b755 12% 18%,transparent 21% 39%,#f4d4ba44 41% 47%,transparent 50%);pointer-events:none}
 .scene[data-phase=morning] .scene-atmosphere::after{opacity:.35}
+.dialogue blockquote{white-space:pre-wrap}
 /* Small stepped silhouettes belong to the grove, rather than floating emblems. */
 .scene .cloud{display:none;width:24%;height:auto;background:none;filter:none;border-radius:0;pointer-events:none;animation:cloud-drift 95s ease-in-out infinite}
 .cloud svg{display:block;width:100%;height:auto}

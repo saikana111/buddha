@@ -36,13 +36,13 @@ export function setLanguage(value){
     document.getElementById(`${prefix}-meditation-note`).textContent=language==='es'?'El Buda elige cuándo sentarse mientras la aplicación está abierta.':'The Buddha chooses when to sit while the app is open.';
   }
   document.title=language==='es'?'Bajo el árbol de Bodhi':'Beneath the Bodhi Tree';
-  const labels={'welcome-title':'Welcome','welcome-intro':'How shall I call you?','username-label':'Username','language-label':'Language','begin':'Begin','profile-title':'Your path','profile-name-label':'Username','profile-focus-label':'What would you like to practice or understand?','profile-notes-label':'What should I remember about your learning?','profile-language-label':'Language','save-profile':'Save','forget-profile':'Forget my profile and conversations','reveal':'Show all','next':'Continue →'};
+  const labels={'welcome-title':'Welcome','welcome-intro':'How shall I call you?','username-label':'Username','language-label':'Language','begin':'Begin','profile-title':'Your path','profile-name-label':'Username','profile-focus-label':'What would you like to practice or understand?','profile-notes-label':'What should I remember about your learning?','profile-language-label':'Language','save-profile':'Save','forget-profile':'Forget my profile and conversations','reveal':'Show all','next':'Continue →','continue-dialogue':'Continue →'};
   for(const [id,text] of Object.entries(labels))document.getElementById(id).textContent=t(text);
   document.querySelector('.profile-note').textContent=t('Saved on this PC. This browser remembers your profile. Learning notes are tentative, not a judgment of your understanding.');
   document.querySelector('#past-chats').parentElement.querySelector('summary').textContent=t('Recent conversations');
   document.querySelector('label[for="question"]').textContent=t('Your message');
   document.getElementById('question').placeholder=t('Speak…');
-  for(const [id,text] of Object.entries({'open-profile':'Player profile and memories','close-profile':'Close profile','close-source':'Close source','send':'Send message','reveal':'Show all','next':'Continue →'})){
+  for(const [id,text] of Object.entries({'open-profile':'Player profile and memories','close-profile':'Close profile','close-source':'Close source','send':'Send message','reveal':'Show all','next':'Continue →','continue-dialogue':'Continue →'})){
     document.getElementById(id).setAttribute('aria-label',t(text));document.getElementById(id).title=t(text);
   }
 }

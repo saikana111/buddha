@@ -9,7 +9,8 @@
     "index": "node scripts/build-library.mjs",
     "import:bundle": "node scripts/import-bundle.mjs",
     "index:canon": "node scripts/index-canonical.mjs",
-    "index:concepts": "node scripts/build-knowledge-map.mjs"
+    "index:concepts": "node scripts/build-knowledge-map.mjs",
+    "audit:teaching": "node scripts/audit-teaching-methods.mjs"
   },
   "engines": {
     "node": ">=22.13"

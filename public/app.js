@@ -1,8 +1,9 @@
 import {t,setLanguage,currentLanguage} from './language.js';
 import {initMeditationUI,isMeditating,resetMeditationUI,localDay,armMeditationAudio,refreshMeditation} from './meditation.js';
 import { setAvatarState } from './scene.js';
+import { dialoguePages } from './dialogue-pages.js';
 const $=id=>document.getElementById(id);
-let history=[],sources=[],verse=0,typing=null,finish=null,configured=false,requestInFlight=false;
+let history=[],sources=[],verse=0,typing=null,finish=null,configured=false,requestInFlight=false,pages=[],pageIndex=0,canContinue=false;
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function sourceButton(id){const b=document.createElement('button');b.className='citation';b.type='button';b.textContent='['+(sources.findIndex(p=>p.id===id)+1)+']';b.setAttribute('aria-label',t("Read source passage"));b.onclick=()=>openSource(id);return b;}
 function openSource(id){const p=sources.find(p=>p.id===id);if(!p)return;const box=$('source-content');box.replaceChildren();const h=document.createElement('h2');h.textContent=p.title;const meta=document.createElement('small');meta.textContent=`${p.tradition} · ${p.collection} · ${p.translator}`;const q=document.createElement('blockquote');q.textContent=p.text;const a=document.createElement('a');a.href=p.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=t("Read the complete source ↗");const note=document.createElement('p');const small=document.createElement('small');small.textContent=t("The dialogue is an AI portrayal, not a historical quotation. This excerpt comes from the source text; its formatting is normalized. Attribution of speakers depends on the original context.");note.append(small);const provenance=document.createElement('details');const summary=document.createElement('summary');summary.textContent=t("Edition and original language");const pre=document.createElement('pre');pre.textContent=`${p.source} · ${p.license}\n${p.licenseStatement}\n\nSegments: ${p.segmentIds.join(', ')}\nRevision: ${p.commit}\n\n${p.original||'Original-language alignment is not available for this passage.'}`;provenance.append(summary,pre);box.append(h,meta,q,a,note,provenance);appendContext(box,p);$('source-dialog').showModal();}
@@ -31,24 +32,41 @@ function appendContext(box,passage){
   }catch(error){loaded=false;const p=document.createElement('p');p.textContent=error.message;details.append(p);}
  });
 }
-function unlock(){if(!configured||isMeditating())return;setAvatarState('idle');$('send').disabled=false;$('question').disabled=false;$('reveal').hidden=true;$('next').hidden=!verse;$('question').focus();}
+function unlock(){if(!configured||isMeditating())return;setAvatarState('idle');$('send').disabled=false;$('question').disabled=false;$('reveal').hidden=true;const morePages=pageIndex+1<pages.length;$('next').hidden=!verse||morePages;$('continue-dialogue').hidden=!canContinue||(!!verse&&!morePages);$('question').focus();}
 async function restoreAfterMeditation(){
   // Restoring an empty history does not call render(), and profile fetches can fail.
   // Neither case may leave the composer locked after a completed sitting.
   try{await loadProfile(true);}finally{unlock();}
 }
-function render(result){sources=result.passages||[];const nodes=[];for(const para of result.paragraphs||[]){const p=document.createElement('p');p.textContent=para.text;for(const id of para.ids)p.append(sourceButton(id));nodes.push(p);}
-  if(!nodes.length&&sources.length){for(const src of sources){const q=document.createElement('blockquote');const translated=result.translatedExcerpts?.find(p=>p.id===src.id);q.textContent=translated?.text||src.text;if(currentLanguage()==='es'){const note=document.createElement('small');note.textContent=t(translated?'Machine-assisted translation; original in the source.':'Source excerpt (English).');nodes.push(note);}q.append(sourceButton(src.id));nodes.push(q);}}
-  if(!nodes.length){const p=document.createElement('p');p.textContent=result.notice||t("Could you tell me a little more?");nodes.push(p);}
-  if(result.learningQuestion){const check=document.createElement('p');check.textContent=result.learningQuestion;nodes.push(check);}
-  const spoken=nodes.map(n=>n.textContent).join('\n');history.push({role:'assistant',content:spoken});history=history.slice(-6);
-  const reply=$('reply');reply.replaceChildren();const all=()=>{clearInterval(typing);typing=null;reply.replaceChildren(...nodes);finish=null;unlock();};finish=all;
+function render(result){sources=result.passages||[];const blocks=(result.paragraphs||[]).map(p=>({...p}));
+  if(!blocks.length&&sources.length){for(const src of sources){const translated=result.translatedExcerpts?.find(p=>p.id===src.id);blocks.push({text:translated?.text||src.text,ids:[src.id],quote:true,note:currentLanguage()==='es'?t(translated?'Machine-assisted translation; original in the source.':'Source excerpt (English).'):''});}}
+  canContinue=blocks.length>0;
+  if(!blocks.length)blocks.push({text:result.notice||t("Could you tell me a little more?"),ids:[]});
+  if(result.learningQuestion)blocks.push({text:result.learningQuestion,ids:[]});
+  history.push({role:'assistant',content:blocks.map(b=>b.text).join('\n')});history=history.slice(-6);
+  pages=dialoguePages(blocks);pageIndex=0;showDialoguePage();
+}
+function showDialoguePage(){
+  const nodes=[];
+  for(const block of pages[pageIndex]||[]){
+    if(block.note){const note=document.createElement('small');note.textContent=block.note;nodes.push(note);}
+    const p=document.createElement(block.quote?'blockquote':'p');p.textContent=block.text;
+    for(const id of block.ids||[])p.append(sourceButton(id));nodes.push(p);
+  }
+  const spoken=nodes.map(n=>n.textContent).join('\n');
+  $('send').disabled=true;$('question').disabled=true;$('continue-dialogue').hidden=true;
+  const reply=$('reply');reply.replaceChildren();if(reply.parentElement)reply.parentElement.scrollTop=0;const all=()=>{clearInterval(typing);typing=null;reply.replaceChildren(...nodes);finish=null;unlock();};finish=all;
   if(reduced){all();return;}
   setAvatarState('speaking');$('reveal').hidden=false;const plain=document.createElement('p');reply.append(plain);let pos=0;typing=setInterval(()=>{pos+=5;plain.textContent=spoken.slice(0,pos);if(pos>=spoken.length)all();},15);
 }
 $('reveal').onclick=()=>finish?.();
+$('continue-dialogue').onclick=()=>{
+  if(isMeditating()||requestInFlight||typing)return;
+  if(pageIndex+1<pages.length){pageIndex++;showDialoguePage();}
+  else return ask(currentLanguage()==='es'?'Continúa, por favor.':'Please continue.');
+};
 async function ask(question,planId){if(isMeditating())return;if(!configured){showWelcome();return;}requestInFlight=true;setAvatarState('listening');verse=0;const m=question.match(/(?:dhammapada|dhp)\s*(?:(?:verse|verso)\s*)?(\d{1,3})\b/i);if(m&&!/explain|mean|interpret|story|stories|background|commentary|explica|significa|historia|comentario/i.test(question))verse=Number(m[1]);if(/^\s*(read|recite|start|begin|teach me)\s+(the\s+)?dhammapada[.!?]?\s*$/i.test(question)){question='Dhammapada verse 1';verse=1;}
-  $('send').disabled=true;$('question').disabled=true;$('next').hidden=true;const waiting=document.createElement('p');waiting.textContent='…';waiting.className='waiting';$('reply').replaceChildren(waiting);
+  $('send').disabled=true;$('question').disabled=true;$('next').hidden=true;$('continue-dialogue').hidden=true;const waiting=document.createElement('p');waiting.textContent='…';waiting.className='waiting';$('reply').replaceChildren(waiting);
   try{const r=await fetch('/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,planId,history,localDate:localDay(),previousIds:sources.map(p=>p.id)})});const result=await r.json();if(!r.ok)throw Error(result.error);history.push({role:'user',content:question});render(result);}catch(e){verse=0;const p=document.createElement('p');p.textContent=t(e.message);$('reply').replaceChildren(p);unlock();}finally{requestInFlight=false;}
 }
 $('form').onsubmit=e=>{e.preventDefault();const q=$('question').value.trim();if(!q)return;$('question').value='';$('question').style.height='auto';ask(q);};
