@@ -3,6 +3,7 @@ import { scenePhase } from './scene-time.js';
 const scene = document.getElementById('living-scene');
 const motion = matchMedia('(prefers-reduced-motion: reduce)');
 let paused = motion.matches;
+let previewPhase='auto';
 const symbols = {
   sunrise: 'A small lamp and rising light, inspired by Dhammapada 387.',
   morning: 'An opening lotus, inspired by Dhammapada 58–59.',
@@ -25,7 +26,11 @@ for(let i=0;i<9;i++){
   leaf.style.setProperty('--delay',`${-i*4.3}s`);leaf.style.setProperty('--duration',`${22+i*2}s`);leaves.append(leaf);
 }
 scene.append(leaves);
-function updateTime(){scene.dataset.phase=scenePhase();scene.title=symbols[scene.dataset.phase]+' Local clock schedule; click to pause motion.';updatePause();}
+function updateTime(){scene.dataset.phase=previewPhase==='auto'?scenePhase():previewPhase;scene.title=symbols[scene.dataset.phase]+(previewPhase==='auto'?' Local clock schedule.':' Debug preview.')+' Click to pause motion.';updatePause();}
+document.getElementById('scene-preview').addEventListener('change',event=>{
+  previewPhase=['sunrise','morning','midday','sunset','night'].includes(event.target.value)?event.target.value:'auto';
+  updateTime();
+});
 export function setAvatarState(state) { scene.dataset.state = state; }
 function updatePause() {
   scene.classList.toggle('paused', paused || document.hidden);

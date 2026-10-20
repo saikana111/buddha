@@ -26,6 +26,11 @@ export const t=text=>language==='es'?(es[text]||text):text;
 export const currentLanguage=()=>language;
 export function setLanguage(value){
   language=value==='es'?'es':'en';document.documentElement.lang=language;
+  document.getElementById('scene-debug-title').textContent=language==='es'?'Depuración: hora del día':'Debug: time of day';
+  document.getElementById('scene-preview-label').textContent=language==='es'?'Vista previa del paisaje':'Preview scenery';
+  document.getElementById('scene-preview-note').textContent=language==='es'?'Solo cambia la imagen. Se restablece al recargar.':'Visual preview only. Resets when you reload.';
+  const phases=language==='es'?['Automático (hora local)','Amanecer','Mañana','Mediodía','Atardecer','Noche']:['Automatic (local time)','Sunrise','Morning','Midday','Sunset','Night'];
+  [...document.getElementById('scene-preview').options].forEach((option,i)=>{option.textContent=phases[i];});
   for(const prefix of ['welcome','player']){
     document.getElementById(`${prefix}-minutes-label`).textContent=language==='es'?'Minutos de meditación por hora':'Meditation minutes per hour';
     document.getElementById(`${prefix}-meditation-note`).textContent=language==='es'?'El Buda elige cuándo sentarse mientras la aplicación está abierta.':'The Buddha chooses when to sit while the app is open.';
@@ -34,7 +39,7 @@ export function setLanguage(value){
   const labels={'welcome-title':'Welcome','welcome-intro':'How shall I call you?','username-label':'Username','language-label':'Language','begin':'Begin','profile-title':'Your path','profile-name-label':'Username','profile-focus-label':'What would you like to practice or understand?','profile-notes-label':'What should I remember about your learning?','profile-language-label':'Language','save-profile':'Save','forget-profile':'Forget my profile and conversations','reveal':'Show all','next':'Continue →'};
   for(const [id,text] of Object.entries(labels))document.getElementById(id).textContent=t(text);
   document.querySelector('.profile-note').textContent=t('Saved on this PC. This browser remembers your profile. Learning notes are tentative, not a judgment of your understanding.');
-  document.querySelector('#profile-dialog summary').textContent=t('Recent conversations');
+  document.querySelector('#past-chats').parentElement.querySelector('summary').textContent=t('Recent conversations');
   document.querySelector('label[for="question"]').textContent=t('Your message');
   document.getElementById('question').placeholder=t('Speak…');
   for(const [id,text] of Object.entries({'open-profile':'Player profile and memories','close-profile':'Close profile','close-source':'Close source','send':'Send message','reveal':'Show all','next':'Continue →'})){
