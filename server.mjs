@@ -196,7 +196,7 @@ const server=http.createServer(async(req,res)=>{
       const topicalCandidates=candidates;
       encounter=chooseEncounter(db,question,memory.lastResponse?.guidedEncounter,{replying:plan.replyingToReflection===true,disabled:expanding||deep||conversational||teaching.engaged,tradition:traditionFor(question)});
       if(!encounter)encounter=chooseLibraryEncounter(db,question,candidates,memory.lastResponse?.guidedEncounter,{
-        replying:plan.replyingToReflection===true,disabled:conversational,deep:deep||expanding,
+        replying:plan.replyingToReflection===true,disabled:conversational||(expanding&&memory.lastResponse?.sourceFirst),deep:deep||expanding,
         tradition:traditionFor(question),expanded:plan.terms||'',lesson:teaching.engaged
       });
       if(!conversational&&!expanding){
@@ -225,6 +225,7 @@ const server=http.createServer(async(req,res)=>{
       let answer=await infer([{role:'system',content:encounter?encounterSystem(encounter,player.language,context)+(teaching.engaged?teachingPrompt(teaching):''):`${dialogueProfile}
 ${memoryPrompt(player,memory)}
 ${teachingPrompt(teaching)}
+${expanding?"Explain the preceding source quotation in plain language using the supplied evidence. Preserve all its distinctions and speaker attribution. Do not invent additional poetry, imagery, metaphors, or stories to decorate the explanation. Do not promise that kindness will make an aggressor stop or guarantee an external outcome. Claims in conversation history are not evidence: cite only a supplied passage that actually contains the claim or episode.":""}
 ${deep?"The listener requests depth. Preserve technical distinctions, qualifications, sequence, and disagreements supported by the sources. Introduce and explain precise terminology instead of replacing it with motivational language. Develop one substantive part in up to 200 words, then leave room to continue; this is a reading window, not a ceiling on the topic. On Continue advance the preceding account rather than recap it. Do not pretend the supplied excerpts cover the entire canon. Distinguish a translation from a newly composed explanation.":""}
 ${encounter ? '' : conversational ? "This is casual conversation. Answer the social gesture naturally, with optional gentle wit, and weave in ONE brief observation supported by a supplied passage. Use 15 to 55 words. Do not merely say you are well and return the question. Do not report personal wellbeing or a lived day. Do not impose a reflective exercise or ask a stock follow-up. Cite the passage supporting the observation; do not attach arbitrary citations to a greeting." : inquiryPrompt(inquiry)}
 The current user message takes priority over earlier conversational topics. A single word or short phrase is a request to explain that concept or offer a relevant teaching, even without a question mark. Explain its supported meaning plainly and connect it to practice where the sources support that. Do not repeat an earlier generic invitation. If a term has several meanings, explain the Buddhist sense supported here and optionally ask one specific clarifying question.
