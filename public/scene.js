@@ -13,7 +13,7 @@ const symbols = {
 };
 const atmosphere = document.createElement('div');
 atmosphere.className = 'scene-atmosphere';atmosphere.setAttribute('aria-hidden','true');
-const cloud = `<svg viewBox="0 0 120 28" shape-rendering="crispEdges"><path fill="currentColor" d="M2 20h12v-5h17v-5h13V4h24v5h12v5h19v5h16v5H2z"/><path fill="currentColor" opacity=".45" d="M14 24h90v3H14z"/><path fill="#fff" opacity=".2" d="M32 13h14V7h20v5h12v3H32z"/></svg>`;
+const cloud = `<svg viewBox="0 0 120 28"><path fill="currentColor" d="M4 23Q1 18 12 17Q17 10 30 12Q35 3 49 6Q58 0 70 7Q84 6 89 14Q103 12 108 18Q120 18 116 23Q97 27 76 25H29Q12 26 4 23Z"/><path fill="#fff" opacity=".17" d="M25 16Q35 7 49 10Q60 3 70 10Q80 8 86 15Q65 12 52 15Q39 13 25 16Z"/></svg>`;
 atmosphere.innerHTML = `<div class="sky-light"></div><div class="celestial"></div><div class="stars"></div><div class="cloud cloud-one">${cloud}</div><div class="cloud cloud-two">${cloud}</div>`;
 scene.prepend(atmosphere);
 // Original pixel-style props. Sources and artistic interpretation: docs/SCENE-SYMBOLISM.md.
@@ -62,10 +62,11 @@ motion.addEventListener('change', event => { paused = event.matches; updatePause
 document.addEventListener('visibilitychange', updateTime);
 setInterval(updateTime,30000);
 const motes = scene.querySelector('.scene-motes');
-for (let i = 0; i < 12; i++) {
+for (let i = 0; i < 16; i++) {
   const mote = document.createElement('i');
-  mote.style.setProperty('--x', `${8 + (i * 37 % 86)}%`);
-  mote.style.setProperty('--y', `${32 + (i * 17 % 56)}%`);
+  // Keep the glows near the pond and tree, clear of the central avatar.
+  mote.style.setProperty('--x', `${i % 2 ? 70 + (i * 7 % 23) : 7 + (i * 7 % 24)}%`);
+  mote.style.setProperty('--y', `${54 + (i * 13 % 35)}%`);
   mote.style.setProperty('--delay', `${-i * 2.7}s`);
   mote.style.setProperty('--duration', `${12 + i % 5 * 3}s`);
   motes.append(mote);

@@ -99,7 +99,7 @@ body{height:var(--viewport-height,100dvh)}
 .scene[data-phase=night] .scene-avatar{filter:brightness(.63) saturate(.65) drop-shadow(0 4px 0 #060e24)}
 .scene[data-phase=night] .cloud{color:#263954;opacity:.95}
 .scene[data-phase=night] .scene-halo{border-color:#b6d1ef99}
-.scene[data-phase=night] .scene-motes i{background:#bcf7b7;width:3px;height:3px}
+.scene[data-phase=night] .scene-motes i{background:#eeffc0;width:4px;height:4px;opacity:.75;box-shadow:0 0 4px 2px #d8ff8eaa,0 0 12px 4px #a8ec5355;animation-name:firefly-drift;animation-timing-function:ease-in-out}
 .scene[data-phase=night] .stars{inset:0 35% 48% 0;width:auto;height:auto;box-shadow:none;background:radial-gradient(circle at 8% 19%,#dceaff 0 1px,transparent 2px),radial-gradient(circle at 21% 7%,#fff5cb 0 1px,transparent 2px),radial-gradient(circle at 36% 31%,#dceaff 0 1.5px,transparent 2px),radial-gradient(circle at 53% 15%,#dceaff 0 1px,transparent 2px),radial-gradient(circle at 67% 38%,#fff5cb 0 1px,transparent 2px),radial-gradient(circle at 80% 9%,#dceaff 0 1.5px,transparent 2px),radial-gradient(circle at 12% 63%,#dceaff 0 1px,transparent 2px),radial-gradient(circle at 45% 75%,#dceaff 0 1px,transparent 2px),radial-gradient(circle at 91% 61%,#dceaff 0 1px,transparent 2px)}
 .scene[data-phase=sunrise] .scene-atmosphere::after,.scene[data-phase=morning] .scene-atmosphere::after{content:'';position:absolute;left:0;right:0;top:60%;height:22%;background:linear-gradient(transparent 10%,#e8c4b755 12% 18%,transparent 21% 39%,#f4d4ba44 41% 47%,transparent 50%);pointer-events:none}
 .scene[data-phase=morning] .scene-atmosphere::after{opacity:.35}
@@ -139,4 +139,5 @@ body{height:var(--viewport-height,100dvh)}
 @keyframes pond-glint{50%{opacity:.25}}
 @keyframes lamp-flicker{30%{transform:scale(.85,1.08) rotate(4deg)}65%{transform:scale(1.05,.9) rotate(-3deg)}}
 @keyframes moon-release{0%,100%{transform:translateX(0);opacity:.95}25%{transform:translateX(70%);opacity:.7}45%,75%{transform:translateX(130%);opacity:.25}}
+@keyframes firefly-drift{0%,100%{opacity:.3;transform:translate(0,8px)}25%{opacity:.95;transform:translate(12px,-7px)}50%{opacity:.4;transform:translate(-5px,-23px)}75%{opacity:1;transform:translate(-14px,-8px)}}
 @media(prefers-reduced-motion:reduce){.scene *,.scene *::before,.scene *::after{animation:none!important;transition:none!important}.scene[data-phase=sunrise] .scene-leaves{display:none}.scene[data-phase=night] .cloud-one{transform:translateX(110%)}}
