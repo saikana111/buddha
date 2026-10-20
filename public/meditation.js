@@ -2,7 +2,7 @@ import {currentLanguage} from './language.js';
 import {setAvatarState} from './scene.js';
 import {MeditationAudio} from './meditation-audio.js';
 const $=id=>document.getElementById(id),audio=new MeditationAudio();
-let state=null,received=0,initialized=false,active=false,working=false,hooks={},lastCheck=0,audioSession=null;
+let state=null,received=0,initialized=false,active=false,working=false,hooks={},lastCheck=0,audioSession=null,playbackGeneration=0,ending=false;
 const say=(en,es)=>currentLanguage()==='es'?es:en;
 export const isMeditating=()=>active;
 export function localDay(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
@@ -21,7 +21,7 @@ function fill(){
 function controls(){let row=$('meditation-controls');if(!row){row=document.createElement('div');row.id='meditation-controls';document.querySelector('.dialogue-controls').append(row);}return row;}
 function button(text,callback){const b=document.createElement('button');b.type='button';b.textContent=text;b.onclick=callback;return b;}
 function startSound(){
- if(!state?.session||state.session.status!=='running'||audio.context?.state!=='running'||!audio.buffers.bell||audioSession===state.session.id)return;
+ if(!active||ending||!state?.session||state.session.status!=='running'||audio.context?.state!=='running'||!audio.buffers.bell||audioSession===state.session.id)return;
  audio.volume(state.settings.volume);audio.ambient(state.settings.sound);if(state.settings.sound!=='silent')audio.bell();audioSession=state.session.id;
 }
 export async function armMeditationAudio(){
@@ -41,11 +41,12 @@ function showSession(){
  updateClock();startSound();
 }
 function updateClock(){const seconds=Math.ceil(remaining());if($('meditation-clock'))$('meditation-clock').textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}${state.session?.status==='paused'?say(' · paused',' · en pausa'):''}`;}
-async function endView(){active=false;audio.stop();audioSession=null;controls().replaceChildren();document.querySelector('.scene-avatar').src='/assets/buddha-retro.png';setAvatarState('idle');await hooks.onEnd?.();}
+function stopPlayback(){playbackGeneration++;audio.stop();audioSession=null;}
+async function endView(){active=false;stopPlayback();controls().replaceChildren();document.querySelector('.scene-avatar').src='/assets/buddha-retro.png';setAvatarState('idle');await hooks.onEnd?.();}
 async function finish(){
- if(working||!active)return;working=true;
- try{const sound=state.settings.sound;await api('finish');await endView();if(sound!=='silent')audio.bell(.6);fill();}
- catch(e){if($('meditation-clock'))$('meditation-clock').textContent=e.message;}finally{working=false;}
+ if(working||!active)return;working=true;ending=true;stopPlayback();
+ try{await api('finish');await endView();fill();}
+ catch(e){if($('meditation-clock'))$('meditation-clock').textContent=e.message;}finally{working=false;ending=false;}
 }
 async function tick(){
  if(!state||working)return;
@@ -73,9 +74,10 @@ export async function initMeditationUI(callbacks){
  document.addEventListener('keydown',()=>{if(audio.context?.state!=='running'||!audio.buffers.bell)void armMeditationAudio();});
  $('open-meditation').onclick=async()=>{if(hooks.isBusy?.())return;try{await api();fill();$('meditation-dialog').showModal();}catch(e){$('med-status').textContent=e.message;}};
  $('close-meditation').onclick=()=>$('meditation-dialog').close();
- $('meditation-dialog').addEventListener('close',()=>{if(!active)audio.stop();});
+ $('meditation-dialog').addEventListener('close',()=>{stopPlayback();startSound();});
  $('med-preview').onclick=async()=>{
-  try{await audio.arm();audio.volume(Number($('med-volume').value));audio.ambient($('med-sound').value);if($('med-sound').value!=='silent')audio.bell();}
+  const generation=++playbackGeneration;
+  try{await audio.arm();if(generation!==playbackGeneration||!$('meditation-dialog').open||ending)return;audio.volume(Number($('med-volume').value));audio.ambient($('med-sound').value);if($('med-sound').value!=='silent')audio.bell();}
   catch(e){$('med-status').textContent=e.message;}
  };
  $('meditation-form').onsubmit=async e=>{
@@ -85,5 +87,5 @@ export async function initMeditationUI(callbacks){
  try{await api();fill();if(state.session)showSession();}catch(error){initialized=false;throw error;}
  setInterval(()=>tick().catch(error=>{$('med-status').textContent=error.message;}),1000);
 }
-export function resetMeditationUI(){state=null;active=false;audioSession=null;audio.mute();controls().replaceChildren();document.querySelector('.scene-avatar').src='/assets/buddha-retro.png';setAvatarState('idle');}
+export function resetMeditationUI(){state=null;active=false;ending=false;stopPlayback();audio.mute();controls().replaceChildren();document.querySelector('.scene-avatar').src='/assets/buddha-retro.png';setAvatarState('idle');}
 export async function refreshMeditation(){await api();fill();}

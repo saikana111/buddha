@@ -57,9 +57,12 @@ export class MeditationAudio {
   stop(){
     this.timers.forEach(clearInterval);this.timers=[];
     for(const {source,nodes} of this.voices){
-      const gain=nodes.find(n=>n.gain);if(gain){gain.gain.cancelScheduledValues(this.context.currentTime);gain.gain.setTargetAtTime(0,this.context.currentTime,.15);}
-      try{source.stop(this.context.currentTime+.5);}catch{}
+      // Disconnect immediately, including sources scheduled to start later.
+      // A filter also has a .gain property; it is not the voice's volume envelope.
+      source.disconnect();nodes.forEach(n=>n.disconnect());
+      try{source.stop();}catch{}
     }
+    this.voices.clear();
   }
   mute(){this.stop();if(this.context)this.context.suspend();}
 }
