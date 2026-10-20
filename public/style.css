@@ -11,7 +11,7 @@
 .scene-motes i{position:absolute;left:var(--x);top:var(--y);width:2px;height:2px;background:#f5d79b;border-radius:50%;box-shadow:0 0 5px #f2c57c70;opacity:0;animation:mote-rise var(--duration) var(--delay) ease-in-out infinite}
 .scene-vignette{position:absolute;inset:0;z-index:5;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,transparent 35%,#070c2150 100%),linear-gradient(0deg,#1017197a,transparent 17%)}
 .scene[data-state="speaking"] .scene-halo{filter:brightness(1.45)}
-.scene.paused *,.scene.paused *::after{animation-play-state:paused!important}
+.scene.paused *,.scene.paused *::after,.scene.paused *::before{animation-play-state:paused!important}
 .scene:focus-visible{outline:2px solid #d9b66b;outline-offset:-3px}
 @keyframes avatar-breath{0%,100%{transform:translateX(-50%) scaleY(1)}50%{transform:translateX(-50%) scaleY(1.006)}}
 @keyframes halo-breath{0%,100%{opacity:.65}50%{opacity:.95}}
@@ -75,31 +75,68 @@ body{height:var(--viewport-height,100dvh)}
 .scene[data-phase=sunrise] .sky-light{background:linear-gradient(180deg,#58476dbb 0%,#f38e8399 29%,#ffc87866 49%,transparent 70%)}
 .scene[data-phase=sunrise] .celestial{left:16%;top:39%;width:7%;background:#ffdc9a}
 .scene[data-phase=sunrise] .scene-avatar{filter:sepia(.22) saturate(1.15) brightness(.9) drop-shadow(9px 5px 0 #34223b55)}
-.scene[data-phase=sunrise] .cloud{background:#ffc6a2;opacity:.32}
+.scene[data-phase=sunrise] .cloud{color:#ffc6a2;opacity:.55}
 .scene[data-phase=morning]{--landscape-filter:brightness(1.04) saturate(1.2) contrast(1.02)}
 .scene[data-phase=morning] .sky-light{background:linear-gradient(180deg,#70dce355,transparent 52%)}
 .scene[data-phase=morning] .celestial{left:24%;top:22%;width:4.5%;background:#fff3be}
 .scene[data-phase=morning] .scene-avatar{filter:brightness(1.06) saturate(1.1) drop-shadow(5px 5px 0 #12373555)}
-.scene[data-phase=morning] .cloud{background:#e5fff5;opacity:.25}
+.scene[data-phase=morning] .cloud{color:#e5fff5;opacity:.65}
 .scene[data-phase=midday]{--landscape-filter:brightness(1.15) saturate(1.35) contrast(1.12)}
 .scene[data-phase=midday] .sky-light{background:linear-gradient(180deg,#064bd533,transparent 45%)}
 .scene[data-phase=midday] .celestial{left:34%;top:5%;width:3.5%;background:#fffde6}
 .scene[data-phase=midday] .scene-avatar{filter:brightness(1.12) saturate(1.08) contrast(1.05) drop-shadow(0 7px 0 #102c2c66)}
-.scene[data-phase=midday] .cloud{background:#fff;opacity:.4;height:4%}
+.scene[data-phase=midday] .cloud{color:#fff;opacity:.7}
 .scene[data-phase=sunset]{--landscape-filter:sepia(.72) saturate(1.65) brightness(.62) contrast(1.18)}
 .scene[data-phase=sunset] .sky-light{background:linear-gradient(180deg,#4b245dcc 0%,#bd456bb3 24%,#ff823399 43%,#ffb24c44 58%,transparent 78%)}
 .scene[data-phase=sunset] .celestial{left:35%;top:39%;width:8%;background:#ffb34f}
 .scene[data-phase=sunset] .scene-avatar{filter:sepia(.42) saturate(1.4) brightness(.78) drop-shadow(-10px 6px 0 #2c143d77)}
-.scene[data-phase=sunset] .cloud{background:#7c365d;opacity:.5}
+.scene[data-phase=sunset] .cloud{color:#7c365d;opacity:.65}
 .scene[data-phase=sunset] .scene-vignette{opacity:.35;background:linear-gradient(0deg,#22122d88,transparent 60%)}
 .scene[data-phase=night]{--landscape-filter:brightness(.27) saturate(.72) contrast(1.15)}
 .scene[data-phase=night] .sky-light{background:linear-gradient(180deg,#081327e6 0%,#17295899 38%,#163b682b 70%,transparent)}
 .scene[data-phase=night] .celestial{left:20%;top:15%;width:5%;background:#e5f0ff}
-.scene[data-phase=night] .celestial::after{content:'';position:absolute;width:88%;height:88%;left:30%;top:-12%;border-radius:50%;background:#101e3b}
+.scene[data-phase=night] .celestial::after{content:none}
 .scene[data-phase=night] .scene-avatar{filter:brightness(.63) saturate(.65) drop-shadow(0 4px 0 #060e24)}
-.scene[data-phase=night] .cloud{background:#8396c2;opacity:.09}
+.scene[data-phase=night] .cloud{color:#263954;opacity:.95}
 .scene[data-phase=night] .scene-halo{border-color:#b6d1ef99}
 .scene[data-phase=night] .scene-motes i{background:#bcf7b7;width:3px;height:3px}
 .scene[data-phase=night] .stars{inset:0 35% 48% 0;width:auto;height:auto;box-shadow:none;background:radial-gradient(circle at 8% 19%,#dceaff 0 1px,transparent 2px),radial-gradient(circle at 21% 7%,#fff5cb 0 1px,transparent 2px),radial-gradient(circle at 36% 31%,#dceaff 0 1.5px,transparent 2px),radial-gradient(circle at 53% 15%,#dceaff 0 1px,transparent 2px),radial-gradient(circle at 67% 38%,#fff5cb 0 1px,transparent 2px),radial-gradient(circle at 80% 9%,#dceaff 0 1.5px,transparent 2px),radial-gradient(circle at 12% 63%,#dceaff 0 1px,transparent 2px),radial-gradient(circle at 45% 75%,#dceaff 0 1px,transparent 2px),radial-gradient(circle at 91% 61%,#dceaff 0 1px,transparent 2px)}
 .scene[data-phase=sunrise] .scene-atmosphere::after,.scene[data-phase=morning] .scene-atmosphere::after{content:'';position:absolute;left:0;right:0;top:60%;height:22%;background:linear-gradient(transparent 10%,#e8c4b755 12% 18%,transparent 21% 39%,#f4d4ba44 41% 47%,transparent 50%);pointer-events:none}
 .scene[data-phase=morning] .scene-atmosphere::after{opacity:.35}
+/* Small stepped silhouettes belong to the grove, rather than floating emblems. */
+.scene .cloud{width:24%;height:auto;background:none;filter:none;border-radius:0;pointer-events:none;animation:cloud-drift 95s ease-in-out infinite}
+.cloud svg{display:block;width:100%;height:auto}
+.scene .cloud-one{left:3%;top:12%}
+.scene .cloud-two{left:34%;top:29%;width:18%;animation-delay:-39s}
+.scene[data-phase=night] .cloud-one{left:14%;top:15%;width:22%;animation:moon-release 65s linear infinite}
+.scene[data-phase=night] .cloud-two{opacity:.35}
+.scene-details{position:absolute;inset:0;z-index:2;pointer-events:none}
+.phase-detail{position:absolute;display:none;overflow:visible}
+.scene[data-phase=morning] .morning-perch,
+.scene[data-phase=midday] .noon-lotus,.scene[data-phase=midday] .noon-bee,
+.scene[data-phase=sunset] .evening-lamp{display:block}
+.morning-perch{right:0;top:31%;width:clamp(130px,19%,213px);aspect-ratio:100/40}.morning-branch{display:block;width:100%;height:auto}
+.morning-bird{position:absolute;left:8%;bottom:45%;width:25%;height:auto;animation:bird-visit 38s steps(24,end) infinite;transform-origin:50% 90%}
+.bird-wing{opacity:0;animation:bird-flutter 38s steps(1,end) infinite}
+.noon-lotus{left:7%;bottom:9%;width:clamp(55px,9%,100px)}
+.lotus-petals{transform-box:fill-box;transform-origin:50% 100%;animation:lotus-sway 13s steps(4,end) infinite}
+.pond-ripple{animation:pond-glint 9s steps(4,end) infinite}
+.noon-bee{left:11%;bottom:24%;width:clamp(12px,1.8%,20px);animation:bee-visit 22s linear infinite}
+.bee-wings{transform-box:fill-box;transform-origin:50% 100%;animation:bee-wings .2s steps(2,end) infinite}
+.evening-lamp{left:23%;bottom:7%;width:clamp(42px,6.5%,74px);filter:drop-shadow(0 -3px 8px #f3a95144)}
+.lamp-flame{transform-box:fill-box;transform-origin:50% 100%;animation:lamp-flicker 2.4s steps(3,end) infinite}
+.scene .scene-leaves{display:none}
+.scene[data-phase=sunrise] .scene-leaves{display:block}
+.scene[data-phase=sunrise] .scene-leaves i{background:#d2a559;clip-path:polygon(45% 0,85% 18%,100% 48%,65% 78%,50% 100%,35% 78%,0 48%,15% 18%);border-radius:0;animation-name:dawn-leaf}
+.scene .scene-motes{display:none}
+.scene[data-phase=night] .scene-motes{display:block}
+@keyframes dawn-leaf{0%{opacity:0;transform:translate(0,-10px) rotate(0)}10%{opacity:.8}35%{transform:translate(-30px,20vh) rotate(80deg)}65%{opacity:.7;transform:translate(-95px,40vh) rotate(200deg)}95%,100%{opacity:0;transform:translate(-140px,65vh) rotate(310deg)}}
+@keyframes bird-visit{0%,48%,100%{transform:translate(0,0);opacity:1}51%{transform:translate(-7px,-6px)}54%,67%{transform:translate(-10px,0);opacity:1}70%{transform:translate(-35px,-20px);opacity:1}78%{transform:translate(-180px,-95px);opacity:0}79%,88%{transform:translate(70px,-70px);opacity:0}94%{transform:translate(25px,-25px);opacity:1}}
+@keyframes bird-flutter{0%,67%,96%,100%{opacity:0}68%,72%,76%,89%,93%{opacity:1}70%,74%,78%,91%,95%{opacity:0}}
+@keyframes bee-visit{0%,100%{transform:translate(35px,-18px)}20%{transform:translate(-15px,-8px)}40%,55%{transform:translate(0,18px)}70%{transform:translate(30px,2px)}85%{transform:translate(50px,-25px)}}
+@keyframes bee-wings{50%{transform:scaleY(.35)}}
+@keyframes lotus-sway{50%{transform:rotate(3deg)}}
+@keyframes pond-glint{50%{opacity:.25}}
+@keyframes lamp-flicker{30%{transform:scale(.85,1.08) rotate(4deg)}65%{transform:scale(1.05,.9) rotate(-3deg)}}
+@keyframes moon-release{0%,100%{transform:translateX(0);opacity:.95}25%{transform:translateX(70%);opacity:.7}45%,75%{transform:translateX(130%);opacity:.25}}
+@media(prefers-reduced-motion:reduce){.scene *,.scene *::before,.scene *::after{animation:none!important;transition:none!important}.scene[data-phase=sunrise] .scene-leaves{display:none}.scene[data-phase=night] .cloud-one{transform:translateX(110%)}}

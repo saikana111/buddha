@@ -5,24 +5,40 @@ const motion = matchMedia('(prefers-reduced-motion: reduce)');
 let paused = motion.matches;
 let previewPhase='auto';
 const symbols = {
-  sunrise: 'A small lamp and rising light, inspired by Dhammapada 387.',
-  morning: 'An opening lotus, inspired by Dhammapada 58–59.',
-  midday: 'An eight-spoked wheel, inspired by the eightfold path in SN 56.11.',
-  sunset: 'Falling leaves evoke impermanence, Dhammapada 277.',
+  sunrise: 'Falling bodhi leaves evoke impermanence, Dhammapada 277.',
+  morning: 'A bird rests on a branch, then flies without a trace, inspired by Dhammapada 92–93.',
+  midday: 'A bee visits a lotus without harming it, inspired by Dhammapada 49 and 58–59.',
+  sunset: 'An oil lamp in the gathering darkness, inspired by Dhammapada 146.',
   night: 'A moon emerging from clouds, inspired by Dhammapada 382.'
 };
 const atmosphere = document.createElement('div');
 atmosphere.className = 'scene-atmosphere';atmosphere.setAttribute('aria-hidden','true');
-atmosphere.innerHTML = `<div class="sky-light"></div><div class="celestial"></div><div class="cloud cloud-one"></div><div class="cloud cloud-two"></div><div class="stars"></div>
-<svg class="teaching-symbol" viewBox="0 0 180 120" xmlns="http://www.w3.org/2000/svg">
-<g class="symbol-lotus" stroke="#dcb8b7" stroke-width="1.5" fill="#ca8c9a"><path d="M90 96Q48 85 57 55Q82 58 90 96Q132 85 123 55Q98 58 90 96"/><path d="M90 96Q66 62 90 35Q114 62 90 96" fill="#eed2b6"/><path d="M90 96Q40 100 30 78Q64 71 90 96Q116 71 150 78Q140 100 90 96" fill="#78a295"/></g>
-<g class="symbol-wheel" fill="none" stroke="#eed195" stroke-width="2"><circle cx="90" cy="65" r="37"/><circle cx="90" cy="65" r="31"/><circle cx="90" cy="65" r="7"/><path d="M90 28V102M53 65H127M64 39L116 91M64 91L116 39"/></g>
-<g class="symbol-lamp"><path d="M62 89Q90 119 118 89Z" fill="#b99058"/><path d="M90 88Q71 75 91 49Q88 66 98 72Q105 84 90 88" fill="#ffdc91"/></g>
-<g class="symbol-leaf" fill="#d8a45b" stroke="#f1c57d"><path d="M64 39Q126 27 114 70Q104 99 76 101Q47 76 64 39Z"/><path d="M62 115Q91 78 104 45" fill="none"/></g></svg>`;
+const cloud = `<svg viewBox="0 0 120 28" shape-rendering="crispEdges"><path fill="currentColor" d="M2 20h12v-5h17v-5h13V4h24v5h12v5h19v5h16v5H2z"/><path fill="currentColor" opacity=".45" d="M14 24h90v3H14z"/><path fill="#fff" opacity=".2" d="M32 13h14V7h20v5h12v3H32z"/></svg>`;
+atmosphere.innerHTML = `<div class="sky-light"></div><div class="celestial"></div><div class="stars"></div><div class="cloud cloud-one">${cloud}</div><div class="cloud cloud-two">${cloud}</div>`;
 scene.prepend(atmosphere);
+// Original pixel-style props. Sources and artistic interpretation: docs/SCENE-SYMBOLISM.md.
+const details=document.createElement('div');details.className='scene-details';details.setAttribute('aria-hidden','true');
+details.innerHTML=`
+<div class="morning-perch phase-detail"><svg class="morning-branch" viewBox="0 0 100 40" shape-rendering="crispEdges"><path fill="#493d29" d="M100 24H65v-3H39v-3H8v4h26v4h28v4h38z"/><path fill="#708b45" d="M20 17h-8v-4h8v-3h7v4h-7zM51 20h8v-5h8v-4H57v4h-6z"/></svg>
+<svg class="morning-bird" viewBox="0 0 40 32" shape-rendering="crispEdges">
+ <g class="bird-body"><path fill="#243b50" d="M6 22H2v-5h8v-5h9V5h12v4h4v10h-5v6H14v-3z"/><path fill="#e8c780" d="M19 15h12v7h-6v3h-9v-5h3z"/><path fill="#4b8091" d="M9 15h12v7H9z"/><path fill="#e8aa53" d="M35 10h5v3h-5zM17 25h2v4h-5v-2h3zM26 25h2v4h-5v-2h3z"/><path fill="#fff5d4" d="M29 8h3v3h-3z"/><path fill="#182932" d="M30 8h2v2h-2z"/></g>
+ <path class="bird-wing" fill="#4b8091" d="M10 16V9H7V3h6v4h6v5h5v5z"/>
+</svg></div>
+<svg class="noon-lotus phase-detail" viewBox="0 0 100 64" shape-rendering="crispEdges">
+ <path class="pond-ripple" fill="none" stroke="#97d7bd" stroke-width="1" d="M5 53h22m46 0h22M17 60h66"/>
+ <path fill="#315e4a" d="M11 48h22v-3h36v3h20v8H11z"/><path fill="#6a9d65" d="M18 48h28v4H18zM59 47h22v5H59z"/>
+ <g class="lotus-petals"><path fill="#b65783" d="M47 48H30v-5h-9V27h9v5h12zM53 48h17v-5h9V27h-9v5H58z"/><path fill="#e78da0" d="M48 48H37v-9h-6V19h8v7h8zM52 48h11v-9h6V19h-8v7h-8z"/><path fill="#ffcfb4" d="M44 43V19h3V9h6v10h3v24z"/><path fill="#f6c567" d="M42 44h16v5H42z"/></g>
+</svg>
+<svg class="noon-bee phase-detail" viewBox="0 0 24 20" shape-rendering="crispEdges"><g class="bee-wings" fill="#e4fff3" opacity=".85"><path d="M6 9V2h5v7zM13 9V1h5v8z"/></g><path fill="#332d32" d="M3 10h17v7H3z"/><path fill="#e6b54f" d="M5 10h4v7H5zM12 10h4v7h-4z"/><path fill="#fff1b6" d="M18 11h2v2h-2z"/></svg>
+<svg class="evening-lamp phase-detail" viewBox="0 0 80 70" shape-rendering="crispEdges">
+ <path fill="#201b2e" opacity=".5" d="M8 61h64v5H8z"/>
+ <g class="lamp-flame"><path fill="#ed8b3e" d="M37 45V29h4V12h4v12h4v10h4v11z"/><path fill="#ffe1a0" d="M41 45V31h4v7h4v7z"/></g>
+ <path fill="#713e39" d="M12 45h56v8h-6v6H23v-6h-6z"/><path fill="#c4814a" d="M12 44h56v5H12z"/><path fill="#e8b16a" d="M18 44h36v2H18z"/><path fill="#a26440" d="M28 59h27v4H28z"/>
+</svg>`;
+scene.append(details);
 const leaves=document.createElement('div');leaves.className='scene-leaves';leaves.setAttribute('aria-hidden','true');
-for(let i=0;i<9;i++){
-  const leaf=document.createElement('i');leaf.style.setProperty('--x',`${(i*31)%100}%`);
+for(let i=0;i<6;i++){
+  const leaf=document.createElement('i');leaf.style.setProperty('--x',`${65+(i*7)%31}%`);
   leaf.style.setProperty('--delay',`${-i*4.3}s`);leaf.style.setProperty('--duration',`${22+i*2}s`);leaves.append(leaf);
 }
 scene.append(leaves);
