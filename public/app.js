@@ -23,13 +23,13 @@ async function enterGrove(){
   const opening=fetch('/api/dhammapada?verse=183',{signal:AbortSignal.timeout(6000)})
     .then(r=>r.ok?r.json():null).catch(()=>null);
   try{
-    await new Promise(resolve=>setTimeout(resolve,reduced?1800:3200));
+    await new Promise(resolve=>setTimeout(resolve,6000));
     if(!valid())return;
     if(!reduced){
       // Slow, stepped sprite appearances, not rapid flashing.
       for(const state of ['glimpse','waiting','glimpse','waiting']){
         arrivalState(state);
-        await new Promise(resolve=>setTimeout(resolve,550));
+        await new Promise(resolve=>setTimeout(resolve,650));
         if(!valid())return;
       }
     }

@@ -106,14 +106,15 @@ test('ordinary motion uses slow sprite blinks before revealing the opening',asyn
   // Re-evaluate a motion-enabled fixture with the same controlled clock.
   const code=readFileSync(new URL('./public/app.js',import.meta.url),'utf8')
     .replace(/^import .*;\r?\n/gm,'').replace("const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;","const reduced=false;");
-  const phases=[],timings=[];
+  const phases=[],timings=[],delays=[];
   const sandbox=vm.createContext({...f.sandbox,fetch:()=>new Promise(()=>{})});
   vm.runInContext(code,sandbox);
   sandbox.setAvatarState=()=>phases.push(f.element('living-scene').dataset.arrival);
-  sandbox.setTimeout=resolve=>{timings.push(f.element('question').disabled);resolve();};
+  sandbox.setTimeout=(resolve,delay)=>{timings.push(f.element('question').disabled);delays.push(delay);resolve();};
   sandbox.fetch=async()=>({ok:false});
   vm.runInContext('configured=true;',sandbox);
   await vm.runInContext('enterGrove()',sandbox);
   assert.deepEqual(phases.slice(0,6),['waiting','glimpse','waiting','glimpse','waiting','ready']);
   assert.ok(timings.every(Boolean));
+  assert.deepEqual(delays,[6000,650,650,650,650]);
 });
